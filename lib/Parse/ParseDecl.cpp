@@ -3070,6 +3070,10 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       isInvalid = DS.SetTypeSpecType(TST_unknown_anytype, Loc,
                                      PrevSpec, DiagID, Policy);
       break;
+    case tok::kw___tstring:
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_tstring, Loc,
+                                     PrevSpec, DiagID, Policy);
+      break;
 
     // class-specifier:
     case tok::kw_class:

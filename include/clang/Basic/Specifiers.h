@@ -63,6 +63,7 @@ namespace clang {
     TST_decltype_auto,    // C++1y decltype(auto)
     TST_unknown_anytype,  // __unknown_anytype extension
     TST_atomic,           // C11 _Atomic
+    TST_tstring,          // CornedBee __string
     TST_error         // erroneous type
   };
   

@@ -285,6 +285,7 @@ public:
   static const TST TST_auto = clang::TST_auto;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
   static const TST TST_atomic = clang::TST_atomic;
+  static const TST TST_tstring = clang::TST_tstring;
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers
