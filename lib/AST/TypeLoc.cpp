@@ -262,6 +262,8 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::WChar_S:
   case BuiltinType::WChar_U:
     return TST_wchar;
+  case BuiltinType::TString:
+    return TST_tstring;
   case BuiltinType::UChar:
   case BuiltinType::UShort:
   case BuiltinType::UInt:

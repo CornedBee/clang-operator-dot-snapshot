@@ -174,6 +174,10 @@ BUILTIN_TYPE(OCLEvent, OCLEventTy)
 // theoretically deducible.
 BUILTIN_TYPE(Dependent, DependentTy)
 
+// This represents the type of a compile-time string. Usable only as
+// the type of a non-type template parameter.
+BUILTIN_TYPE(TString, TStringTy)
+
 // The type of an unresolved overload set.  A placeholder type.
 // Expressions with this type have one of the following basic
 // forms, with parentheses generally permitted:

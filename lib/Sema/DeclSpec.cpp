@@ -285,6 +285,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_unspecified:
     case TST_void:
     case TST_wchar:
+    case TST_tstring:
       return false;
 
     case TST_decltype_auto:

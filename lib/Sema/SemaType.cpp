@@ -881,9 +881,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     declarator.setInvalidType(true);
     break;
   case DeclSpec::TST_tstring:  // __tstring
-    S.Diag(DS.getTypeSpecTypeLoc(), diag::err_tstring_unsupported);
-    Result = Context.IntTy;
-    declarator.setInvalidType(true);
+    Result = Context.TStringTy;
     break;
   case DeclSpec::TST_class:
   case DeclSpec::TST_enum:

@@ -202,13 +202,16 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
     case BuiltinType::OCLSampler:
     case BuiltinType::OCLEvent:
       return true;
-      
+
+    case BuiltinType::TString:
+      llvm_unreachable("asking for RTTI for __tstring");
+
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
     case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
-      llvm_unreachable("asking for RRTI for a placeholder type!");
+      llvm_unreachable("asking for RTTI for a placeholder type!");
       
     case BuiltinType::ObjCId:
     case BuiltinType::ObjCClass:

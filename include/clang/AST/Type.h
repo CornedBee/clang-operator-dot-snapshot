@@ -1569,6 +1569,7 @@ public:
   bool isTemplateTypeParmType() const;          // C++ template type parameter
   bool isNullPtrType() const;                   // C++0x nullptr_t
   bool isAtomicType() const;                    // C11 _Atomic()
+  bool isTStringType() const;                   // CornedBee __tstring
 
   bool isImage1dT() const;                      // OpenCL image1d_t
   bool isImage1dArrayT() const;                 // OpenCL image1d_array_t
@@ -5083,6 +5084,12 @@ inline bool Type::isHalfType() const {
 inline bool Type::isNullPtrType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>())
     return BT->getKind() == BuiltinType::NullPtr;
+  return false;
+}
+
+inline bool Type::isTStringType() const {
+  if (const BuiltinType *BT = getAs<BuiltinType>())
+    return BT->getKind() == BuiltinType::TString;
   return false;
 }
 

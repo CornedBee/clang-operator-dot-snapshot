@@ -729,6 +729,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_class:
   case TST_auto:
   case TST_decltype_auto:
+  case TST_tstring:
   case TST_unknown_anytype:
   case TST_error:
     break;

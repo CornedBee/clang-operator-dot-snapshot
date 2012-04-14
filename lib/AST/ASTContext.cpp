@@ -1055,6 +1055,9 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target) {
 
   // Builtin type used to help define __builtin_va_list.
   VaListTagTy = QualType();
+
+  // __tstring compile-time string (CornedBee)
+  InitBuiltinType(TStringTy, BuiltinType::TString);
 }
 
 DiagnosticsEngine &ASTContext::getDiagnostics() const {
@@ -5155,6 +5158,7 @@ static char getObjCEncodingForPrimitiveKind(const ASTContext *C,
     case BuiltinType::OCLImage3d:
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLSampler:
+    case BuiltinType::TString:
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(KIND, ID)
 #define PLACEHOLDER_TYPE(KIND, ID) \

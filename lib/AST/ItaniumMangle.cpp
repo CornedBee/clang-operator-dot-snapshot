@@ -1974,6 +1974,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::Double: Out << 'd'; break;
   case BuiltinType::LongDouble: Out << 'e'; break;
   case BuiltinType::NullPtr: Out << "Dn"; break;
+  case BuiltinType::TString: Out << "u7tstring"; break;
 
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \

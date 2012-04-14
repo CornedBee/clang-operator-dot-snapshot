@@ -1735,7 +1735,7 @@ IsTransparentUnionStandardConversion(Sema &S, Expr* From,
 bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
   const BuiltinType *To = ToType->getAs<BuiltinType>();
   // All integers are built-in.
-  if (!To) {
+  if (!To || !To->isIntegerType()) {
     return false;
   }
 

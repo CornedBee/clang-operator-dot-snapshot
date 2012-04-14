@@ -6750,8 +6750,6 @@ def err_nsconsumed_attribute_mismatch : Error<
 def err_nsreturns_retained_attribute_mismatch : Error<
   "overriding method has mismatched ns_returns_%select{not_retained|retained}0"
   " attributes">;
-def err_tstring_unsupported : Error<
-  "__tstring is not yet supported">;
 
 def note_getter_unavailable : Note<
   "or because setter is declared here, but no getter method %0 is found">;

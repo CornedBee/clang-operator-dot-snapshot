@@ -71,7 +71,7 @@ serialization::TypeIdxFromBuiltin(const BuiltinType *BT) {
   case BuiltinType::OCLEvent:         ID = PREDEF_TYPE_EVENT_ID;        break;
   case BuiltinType::BuiltinFn:
                                 ID = PREDEF_TYPE_BUILTIN_FN; break;
-
+  case BuiltinType::TString:    ID = PREDEF_TYPE_TSTRING;       break;
   }
 
   return TypeIdx(ID);
