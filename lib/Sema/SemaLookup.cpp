@@ -1983,6 +1983,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
 
     case TemplateArgument::Declaration:
     case TemplateArgument::Integral:
+    case TemplateArgument::String:
     case TemplateArgument::Expression:
     case TemplateArgument::NullPtr:
       // [Note: non-type template arguments do not contribute to the set of

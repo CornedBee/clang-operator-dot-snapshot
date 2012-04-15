@@ -638,6 +638,8 @@ Sema::CheckNonTypeTemplateParameterType(QualType T, SourceLocation Loc) {
       T->isMemberPointerType() ||
       //   -- std::nullptr_t.
       T->isNullPtrType() ||
+      // CornedBee extension: __tstring
+      T->isTStringType() ||
       // If T is a dependent type, we can't do the check now, so we
       // assume that it is well-formed.
       T->isDependentType()) {
@@ -2328,6 +2330,7 @@ static bool isTemplateArgumentTemplateParameter(
   case TemplateArgument::NullPtr:
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
+  case TemplateArgument::String:
   case TemplateArgument::Pack:
   case TemplateArgument::TemplateExpansion:
     return false;
@@ -3419,6 +3422,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
     case TemplateArgument::Declaration:
     case TemplateArgument::Integral:
     case TemplateArgument::NullPtr:
+    case TemplateArgument::String:
       // We've already checked this template argument, so just copy
       // it to the list of converted arguments.
       Converted.push_back(Arg.getArgument());
@@ -3554,6 +3558,8 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
     llvm_unreachable("Integral argument with template template parameter");
   case TemplateArgument::NullPtr:
     llvm_unreachable("Null pointer argument with template template parameter");
+  case TemplateArgument::String:
+    llvm_unreachable("String argument with template template parameter");
 
   case TemplateArgument::Pack:
     llvm_unreachable("Caller must expand template argument packs");
@@ -4927,6 +4933,24 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   }
 
   QualType ArgType = Arg->getType();
+
+  if (ParamType->isTStringType()) {
+    // The argument for a __tstring argument can be a string literal or
+    // an existing __tstring value.
+    //if (ArgType->isTStringType()) {
+    //  Converted = TemplateArgument(Arg);
+    //  return Arg;
+    //}
+
+    if (StringLiteral *String = dyn_cast<StringLiteral>(Arg)) {
+      Converted = TemplateArgument(String);
+      return Arg;
+    }
+
+    Diag(Arg->getLocStart(), diag::err_bad_tstring_argument);
+    return ExprError();
+  }
+
   DeclAccessPair FoundResult; // temporary for ResolveOverloadedFunction
 
   // Handle pointer-to-function, reference-to-function, and

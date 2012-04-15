@@ -4736,6 +4736,7 @@ void ASTWriter::AddTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind,
                                            RecordDataImpl &Record) {
   switch (Kind) {
   case TemplateArgument::Expression:
+  case TemplateArgument::String:
     AddStmt(Arg.getAsExpr());
     break;
   case TemplateArgument::Type:
@@ -5176,6 +5177,9 @@ void ASTWriter::AddTemplateArgument(const TemplateArgument &Arg,
   case TemplateArgument::Integral:
     AddAPSInt(Arg.getAsIntegral(), Record);
     AddTypeRef(Arg.getIntegralType(), Record);
+    break;
+  case TemplateArgument::String:
+    AddStmt(Arg.getAsString());
     break;
   case TemplateArgument::Template:
     AddTemplateName(Arg.getAsTemplateOrTemplatePattern(), Record);

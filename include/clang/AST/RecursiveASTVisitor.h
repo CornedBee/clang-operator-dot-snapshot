@@ -769,6 +769,9 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgument(
   case TemplateArgument::NullPtr:
     return true;
 
+  case TemplateArgument::String:
+    return getDerived().TraverseStmt(Arg.getAsString());
+
   case TemplateArgument::Type:
     return getDerived().TraverseType(Arg.getAsType());
 
@@ -801,6 +804,9 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLoc(
   case TemplateArgument::Integral:
   case TemplateArgument::NullPtr:
     return true;
+
+  case TemplateArgument::String:
+    return getDerived().TraverseStmt(ArgLoc.getSourceString());
 
   case TemplateArgument::Type: {
     // FIXME: how can TSI ever be NULL?

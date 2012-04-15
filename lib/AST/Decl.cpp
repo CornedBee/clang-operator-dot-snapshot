@@ -309,6 +309,7 @@ static LinkageInfo getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
     switch (Arg.getKind()) {
     case TemplateArgument::Null:
     case TemplateArgument::Integral:
+    case TemplateArgument::String:
     case TemplateArgument::Expression:
       continue;
 

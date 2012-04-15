@@ -3361,6 +3361,14 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A) {
   case TemplateArgument::Integral:
     mangleIntegerLiteral(A.getIntegralType(), A.getAsIntegral());
     break;
+  case TemplateArgument::String:
+    // <string argument> ::= S <string>
+    // <string> ::= FIXME: find good encoding
+    // this one is too trusting
+    Out << 'S';
+    Out << A.getAsString()->getByteLength();
+    Out << A.getAsString()->getBytes();
+    break;
   case TemplateArgument::Declaration: {
     //  <expr-primary> ::= L <mangled-name> E # external name
     // Clang produces AST's where pointer-to-member-function expressions

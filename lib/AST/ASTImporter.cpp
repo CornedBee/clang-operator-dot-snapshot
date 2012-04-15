@@ -308,7 +308,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     
     return llvm::APSInt::isSameValue(Arg1.getAsIntegral(), Arg2.getAsIntegral());
-      
+
+  case TemplateArgument::String:
+    return Arg1.structurallyEquals(Arg2);
+
   case TemplateArgument::Declaration:
     return Context.IsStructurallyEquivalent(Arg1.getAsDecl(), Arg2.getAsDecl());
 
@@ -2096,6 +2099,11 @@ ASTNodeImporter::ImportTemplateArgument(const TemplateArgument &From) {
     ValueDecl *FromD = From.getAsDecl();
     if (ValueDecl *To = cast_or_null<ValueDecl>(Importer.Import(FromD)))
       return TemplateArgument(To, From.isDeclForReferenceParam());
+  }
+
+  case TemplateArgument::String: {
+    if (Expr *ToExpr = Importer.Import(From.getAsString()))
+      return TemplateArgument(cast<StringLiteral>(ToExpr));
     return TemplateArgument();
   }
 

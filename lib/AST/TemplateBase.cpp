@@ -107,6 +107,7 @@ bool TemplateArgument::isDependent() const {
     return false;
 
   case Integral:
+  case String:
     // Never dependent
     return false;
 
@@ -148,6 +149,7 @@ bool TemplateArgument::isInstantiationDependent() const {
     return false;
       
   case Integral:
+  case String:
     // Never dependent
     return false;
     
@@ -171,7 +173,8 @@ bool TemplateArgument::isPackExpansion() const {
   case Null:
   case Declaration:
   case Integral:
-  case Pack:    
+  case String:
+  case Pack:
   case Template:
   case NullPtr:
     return false;
@@ -194,6 +197,7 @@ bool TemplateArgument::containsUnexpandedParameterPack() const {
   case Null:
   case Declaration:
   case Integral:
+  case String:
   case TemplateExpansion:
   case NullPtr:
     break;
@@ -274,6 +278,10 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     getIntegralType().Profile(ID);
     break;
 
+  case String:
+    getAsString()->Profile(ID, Context, true);
+    break;
+
   case Expression:
     getAsExpr()->Profile(ID, Context, true);
     break;
@@ -305,6 +313,20 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
     return getIntegralType() == Other.getIntegralType() &&
            getAsIntegral() == Other.getAsIntegral();
 
+  case String: {
+    const StringLiteral *LHS = getAsString();
+    const StringLiteral *RHS = Other.getAsString();
+    unsigned LHSLength = LHS->getLength();
+    unsigned RHSLength = RHS->getLength();
+    if (LHSLength != RHSLength)
+      return false;
+    for (unsigned i = 0; i < LHSLength; ++i) {
+      if (LHS->getCodeUnit(i) != RHS->getCodeUnit(i))
+        return false;
+    }
+    return true;
+  }
+
   case Pack:
     if (Args.NumArgs != Other.Args.NumArgs) return false;
     for (unsigned I = 0, E = Args.NumArgs; I != E; ++I)
@@ -331,6 +353,7 @@ TemplateArgument TemplateArgument::getPackExpansionPattern() const {
 
   case Declaration:
   case Integral:
+  case String:
   case Pack:
   case Null:
   case Template:
@@ -384,7 +407,11 @@ void TemplateArgument::print(const PrintingPolicy &Policy,
     printIntegral(*this, Out);
     break;
   }
-    
+
+  case String:
+    getAsString()->printPretty(Out, 0, Policy);
+    break;
+
   case Expression:
     getAsExpr()->printPretty(Out, nullptr, Policy);
     break;
@@ -414,8 +441,16 @@ TemplateArgumentLocInfo::TemplateArgumentLocInfo() {
   memset((void*)this, 0, sizeof(TemplateArgumentLocInfo));
 }
 
+StringLiteral *TemplateArgumentLoc::getSourceString() const {
+  assert(Argument.getKind() == TemplateArgument::String);
+  return static_cast<StringLiteral*>(LocInfo.getAsExpr());
+}
+
 SourceRange TemplateArgumentLoc::getSourceRange() const {
   switch (Argument.getKind()) {
+  case TemplateArgument::String:
+    return getSourceString()->getSourceRange();
+
   case TemplateArgument::Expression:
     return getSourceExpression()->getSourceRange();
 
@@ -473,7 +508,18 @@ const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
       
   case TemplateArgument::Integral:
     return DB << Arg.getAsIntegral().toString(10);
-      
+
+  case TemplateArgument::String: {
+    // FIXME: We're guessing at LangOptions!
+    SmallString<32> Str;
+    llvm::raw_svector_ostream OS(Str);
+    LangOptions LangOpts;
+    LangOpts.CPlusPlus = true;
+    PrintingPolicy Policy(LangOpts);
+    Arg.getAsString()->printPretty(OS, 0, Policy);
+    return DB << OS.str();
+  }
+
   case TemplateArgument::Template:
     return DB << Arg.getAsTemplate();
 

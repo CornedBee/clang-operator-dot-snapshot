@@ -210,6 +210,14 @@ checkDeducedTemplateArguments(ASTContext &Context,
     // All other combinations are incompatible.
     return DeducedTemplateArgument();
 
+  case TemplateArgument::String:
+    if (Y.getKind() == TemplateArgument::String &&
+        X.structurallyEquals(Y))
+      return X;
+
+    // All other combinations are incompatible.
+    return DeducedTemplateArgument();
+
   case TemplateArgument::Template:
     if (Y.getKind() == TemplateArgument::Template &&
         Context.hasSameTemplateName(X.getAsTemplate(), Y.getAsTemplate()))
@@ -1763,6 +1771,16 @@ DeduceTemplateArguments(Sema &S,
     Info.SecondArg = Arg;
     return Sema::TDK_NonDeducedMismatch;
 
+  case TemplateArgument::String:
+    if (Arg.getKind() == TemplateArgument::String) {
+      if (Param.structurallyEquals(Arg))
+        return Sema::TDK_Success;
+    }
+
+    Info.FirstArg = Param;
+    Info.SecondArg = Arg;
+    return Sema::TDK_NonDeducedMismatch;
+
   case TemplateArgument::Expression: {
     if (NonTypeTemplateParmDecl *NTTP
           = getDeducedParameterFromExpr(Param.getAsExpr())) {
@@ -1978,6 +1996,9 @@ static bool isSameTemplateArg(ASTContext &Context,
     case TemplateArgument::Integral:
       return X.getAsIntegral() == Y.getAsIntegral();
 
+    case TemplateArgument::String:
+      return X.structurallyEquals(Y);
+
     case TemplateArgument::Expression: {
       llvm::FoldingSetNodeID XID, YID;
       X.getAsExpr()->Profile(XID, Context, true);
@@ -2050,24 +2071,26 @@ getTrivialTemplateArgumentLoc(Sema &S,
     return TemplateArgumentLoc(TemplateArgument(E), E);
   }
 
-    case TemplateArgument::Template:
-    case TemplateArgument::TemplateExpansion: {
-      NestedNameSpecifierLocBuilder Builder;
-      TemplateName Template = Arg.getAsTemplate();
-      if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
-        Builder.MakeTrivial(S.Context, DTN->getQualifier(), Loc);
-      else if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-        Builder.MakeTrivial(S.Context, QTN->getQualifier(), Loc);
-      
-      if (Arg.getKind() == TemplateArgument::Template)
-        return TemplateArgumentLoc(Arg, 
-                                   Builder.getWithLocInContext(S.Context),
-                                   Loc);
-      
-      
-      return TemplateArgumentLoc(Arg, Builder.getWithLocInContext(S.Context),
-                                 Loc, Loc);
-    }
+  case TemplateArgument::String:
+    return TemplateArgumentLoc(Arg, Arg.getAsString());
+
+  case TemplateArgument::Template:
+  case TemplateArgument::TemplateExpansion: {
+    NestedNameSpecifierLocBuilder Builder;
+    TemplateName Template = Arg.getAsTemplate();
+    if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
+      Builder.MakeTrivial(S.Context, DTN->getQualifier(), Loc);
+    else if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
+      Builder.MakeTrivial(S.Context, QTN->getQualifier(), Loc);
+
+    if (Arg.getKind() == TemplateArgument::Template)
+      return TemplateArgumentLoc(Arg, 
+                                 Builder.getWithLocInContext(S.Context),
+                                 Loc);
+
+    return TemplateArgumentLoc(Arg, Builder.getWithLocInContext(S.Context),
+                               Loc, Loc);
+  }
 
   case TemplateArgument::Expression:
     return TemplateArgumentLoc(Arg, Arg.getAsExpr());
@@ -5011,6 +5034,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
   switch (TemplateArg.getKind()) {
   case TemplateArgument::Null:
   case TemplateArgument::Integral:
+  case TemplateArgument::String:
   case TemplateArgument::Declaration:
     break;
 

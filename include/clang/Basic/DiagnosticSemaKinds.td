@@ -3195,6 +3195,9 @@ def err_pointer_to_member_oper_value_classify: Error<
 def ext_ms_deref_template_argument: ExtWarn<
   "non-type template argument containing a dereference operation is a "
   "Microsoft extension">, InGroup<Microsoft>;
+def err_bad_tstring_argument : Error<
+  "only string literals and __tstring values are valid for "
+  "__tstring non-type template parameters">;
 
 // C++ template specialization
 def err_template_spec_unknown_kind : Error<

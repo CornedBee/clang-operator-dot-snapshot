@@ -892,6 +892,7 @@ Sema::getTemplateArgumentPackExpansionPattern(
   case TemplateArgument::Template:
   case TemplateArgument::Integral:
   case TemplateArgument::Pack:
+  case TemplateArgument::String:
   case TemplateArgument::Null:
     return TemplateArgumentLoc();
   }

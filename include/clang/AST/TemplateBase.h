@@ -30,6 +30,7 @@ namespace clang {
 
 class DiagnosticBuilder;
 class Expr;
+class StringLiteral;
 struct PrintingPolicy;
 class TypeSourceInfo;
 class ValueDecl;
@@ -53,6 +54,9 @@ public:
     /// The template argument is an integral value stored in an llvm::APSInt
     /// that was provided for an integral non-type template parameter.
     Integral,
+    /// The template argument is a string literal (provided as an expression)
+    /// that was provided for a __tstring non-type template parameter.
+    String,
     /// The template argument is a template name that was provided for a
     /// template template parameter.
     Template,
@@ -147,6 +151,12 @@ public:
   TemplateArgument(const TemplateArgument &Other, QualType Type) {
     Integer = Other.Integer;
     Integer.Type = Type.getAsOpaquePtr();
+  }
+
+  /// \brief Construct a string template argument.
+  TemplateArgument(StringLiteral *Value) {
+    TypeOrValue.Kind = String;
+    TypeOrValue.V = reinterpret_cast<uintptr_t>(Value);
   }
 
   /// \brief Construct a template argument that is a template.
@@ -310,6 +320,12 @@ public:
     return reinterpret_cast<Expr *>(TypeOrValue.V);
   }
 
+  /// \brief Retrieve the template argument as a string literal.
+  StringLiteral *getAsString() const {
+    assert(getKind() == String && "Unexpected kind");
+    return reinterpret_cast<StringLiteral*>(TypeOrValue.V);
+  }
+
   /// \brief Iterator that traverses the elements of a template argument pack.
   typedef const TemplateArgument * pack_iterator;
 
@@ -434,7 +450,8 @@ public:
 
   TemplateArgumentLoc(const TemplateArgument &Argument, Expr *E)
     : Argument(Argument), LocInfo(E) {
-    assert(Argument.getKind() == TemplateArgument::Expression);
+    assert(Argument.getKind() == TemplateArgument::Expression ||
+           Argument.getKind() == TemplateArgument::String);
   }
 
   TemplateArgumentLoc(const TemplateArgument &Argument, 
@@ -470,6 +487,8 @@ public:
     assert(Argument.getKind() == TemplateArgument::Type);
     return LocInfo.getAsTypeSourceInfo();
   }
+
+  StringLiteral *getSourceString() const;
 
   Expr *getSourceExpression() const {
     assert(Argument.getKind() == TemplateArgument::Expression);

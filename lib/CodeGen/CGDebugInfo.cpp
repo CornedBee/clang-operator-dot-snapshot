@@ -1316,7 +1316,8 @@ CollectTemplateParams(const TemplateParameterList *TPList,
               CollectTemplateParams(nullptr, TA.getPackAsArray(), Unit));
       TemplateParams.push_back(TVP);
     } break;
-    case TemplateArgument::Expression: {
+    case TemplateArgument::Expression:
+    case TemplateArgument::String: {
       const Expr *E = TA.getAsExpr();
       QualType T = E->getType();
       llvm::Value *V = CGM.EmitConstantExpr(E, T);
