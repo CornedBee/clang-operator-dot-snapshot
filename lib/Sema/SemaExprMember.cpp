@@ -1566,6 +1566,25 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   return ExprError();
 }
 
+static ExprResult
+ActOnTStringMemberAccess(Sema &S, Expr *Base, bool IsArrow,
+                         SourceLocation OpLoc, CXXScopeSpec &SS,
+                         const DeclarationNameInfo &NameInfo,
+                         const TemplateArgumentListInfo *TemplateArgs)
+{
+  IdentifierInfo *Identifier = NameInfo.getName().getAsIdentifierInfo();
+  if (IsArrow || SS.isSet() || TemplateArgs || !Identifier) {
+    S.Diag(OpLoc, diag::err_invalid_tstring_member_access);
+    return ExprError();
+  }
+
+  if (Identifier->isStr("c_str")) {
+  }
+
+  S.Diag(OpLoc, diag::err_no_member) << Identifier << "__tstring";
+  return ExprError();
+}
+
 /// The main callback when the parser finds something like
 ///   expression . [nested-name-specifier] identifier
 ///   expression -> [nested-name-specifier] identifier
@@ -1633,6 +1652,11 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
     return ActOnDependentMemberExpr(Base, Base->getType(), IsArrow, OpLoc, SS,
                                     TemplateKWLoc, FirstQualifierInScope,
                                     NameInfo, TemplateArgs);
+  }
+
+  if (Base->getType()->isTStringType()) {
+    return ActOnTStringMemberAccess(*this, Base, IsArrow, OpLoc, SS, NameInfo,
+                                      TemplateArgs);
   }
 
   ActOnMemberAccessExtraArgs ExtraArgs = {S, Id, ObjCImpDecl,

@@ -5268,7 +5268,7 @@ Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base, SourceLocation OpLoc,
   // expressions or normal member (ivar or property) access expressions.
   if (BaseType->isObjCObjectOrInterfaceType()) {
     MayBePseudoDestructor = true;
-  } else if (!BaseType->isRecordType()) {
+  } else if (!BaseType->isRecordType() && !BaseType->isTStringType()) {
     ObjectType = ParsedType();
     MayBePseudoDestructor = true;
     return Base;
