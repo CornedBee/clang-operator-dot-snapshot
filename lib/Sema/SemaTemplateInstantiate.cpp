@@ -1134,15 +1134,33 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
   ExprResult result;
   QualType type;
 
-  // The template argument itself might be an expression, in which
-  // case we just return that expression.
-  if (arg.getKind() == TemplateArgument::Expression) {
+  // If the argument is a pack expansion, the parameter must actually be a
+  // parameter pack, and we should substitute the pattern itself, producing
+  // an expression which contains an unexpanded parameter pack.
+  if (arg.isPackExpansion()) {
+    assert(parm->isParameterPack() && "pack expansion for non-pack");
+    arg = arg.getPackExpansionPattern();
+  }
+
+  switch (arg.getKind()) {
+  case TemplateArgument::Null:
+  case TemplateArgument::Type:
+  case TemplateArgument::Template:
+  case TemplateArgument::TemplateExpansion:
+  case TemplateArgument::Pack:
+    llvm_unreachable("Not a non-type template parameter");
+
+  case TemplateArgument::Expression: {
+    // The template argument itself might be an expression, in which
+    // case we just return that expression.
     Expr *argExpr = arg.getAsExpr();
     result = argExpr;
     type = argExpr->getType();
+    break;
+  }
 
-  } else if (arg.getKind() == TemplateArgument::Declaration ||
-             arg.getKind() == TemplateArgument::NullPtr) {
+  case TemplateArgument::Declaration:
+  case TemplateArgument::NullPtr: {
     ValueDecl *VD;
     if (arg.getKind() == TemplateArgument::Declaration) {
       VD = cast<ValueDecl>(arg.getAsDecl());
@@ -1175,15 +1193,29 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
     assert(!type->isDependentType() && "param type still dependent");
     result = SemaRef.BuildExpressionFromDeclTemplateArgument(arg, type, loc);
 
-    if (!result.isInvalid()) type = result.get()->getType();
-  } else {
+    if (!result.isInvalid())
+      type = result.get()->getType();
+    break;
+  }
+
+  case TemplateArgument::Integral: {
     result = SemaRef.BuildExpressionFromIntegralTemplateArgument(arg, loc);
 
     // Note that this type can be different from the type of 'result',
     // e.g. if it's an enum type.
     type = arg.getIntegralType();
+    break;
   }
-  if (result.isInvalid()) return ExprError();
+
+  case TemplateArgument::String: {
+    result = arg.getAsString();
+    type = result.get()->getType();
+    break;
+  }
+  }
+
+  if (result.isInvalid())
+    return ExprError();
 
   Expr *resultExpr = result.get();
   return new (SemaRef.Context) SubstNonTypeTemplateParmExpr(

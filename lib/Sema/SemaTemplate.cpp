@@ -4935,12 +4935,17 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   QualType ArgType = Arg->getType();
 
   if (ParamType->isTStringType()) {
+    // Real __tstrings are still value dependent. We don't want to check them.
+    if (Arg->isValueDependent()) {
+      Converted = TemplateArgument(Arg);
+      return Arg;
+    }
     // The argument for a __tstring argument can be a string literal or
-    // an existing __tstring value.
-    //if (ArgType->isTStringType()) {
-    //  Converted = TemplateArgument(Arg);
-    //  return Arg;
-    //}
+    // an existing __tstring value. The latter is a
+    // SubstNonTypeTemplateParmExpr, so look through that.
+    if (SubstNonTypeTemplateParmExpr *Subst =
+                dyn_cast<SubstNonTypeTemplateParmExpr>(Arg))
+      Arg = Subst->getReplacement();
 
     if (StringLiteral *String = dyn_cast<StringLiteral>(Arg)) {
       Converted = TemplateArgument(String);
