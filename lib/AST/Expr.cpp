@@ -2876,6 +2876,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx) const {
   case ObjCBoolLiteralExprClass:
   case CXXUuidofExprClass:
   case OpaqueValueExprClass:
+  case PseudoMemberExprClass:
     // These never have a side-effect.
     return false;
 

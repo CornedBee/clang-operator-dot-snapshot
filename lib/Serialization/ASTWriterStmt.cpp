@@ -1782,6 +1782,20 @@ void ASTStmtWriter::VisitOMPSimdDirective(OMPSimdDirective *D) {
 }
 
 //===----------------------------------------------------------------------===//
+// CornedBee Expressions and Statements.
+//===----------------------------------------------------------------------===//
+
+void ASTStmtWriter::VisitPseudoMemberExpr(PseudoMemberExpr *S) {
+  VisitExpr(S);
+  Writer.AddStmt(S->base);
+  Writer.AddSourceLocation(S->opLoc, Record);
+  Writer.AddSourceLocation(S->memberLoc, Record);
+  Writer.AddIdentifierRef(S->identifier, Record);
+  Record.push_back(S->kind);
+  Code = serialization::EXPR_PSEUDO_MEMBER;
+}
+
+//===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//
 

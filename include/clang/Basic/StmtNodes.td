@@ -179,3 +179,6 @@ def AsTypeExpr : DStmt<Expr>;
 def OMPExecutableDirective : Stmt<1>;
 def OMPParallelDirective : DStmt<OMPExecutableDirective>;
 def OMPSimdDirective : DStmt<OMPExecutableDirective>;
+
+// CornedBee Extensions.
+def PseudoMemberExpr : DStmt<Expr>;

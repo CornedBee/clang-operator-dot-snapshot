@@ -3794,6 +3794,69 @@ public:
   }
 };
 
+/// \brief Access to a member of a built-in type with special meaning.
+///
+/// The built-in type __tstring has special pseudo-members that can be
+/// accessed using member access syntax. This expression represents such
+/// an access.
+class PseudoMemberExpr : public Expr {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
+public:
+  /// \brief The various kinds of pseudo-members known to Clang.
+  enum Kind {
+    StaticStringAsArray  ///< __tstring::c_str
+  };
+
+private:
+  Stmt *base;
+  SourceLocation opLoc;
+  SourceLocation memberLoc;
+  IdentifierInfo *identifier;
+  Kind kind;
+
+public:
+  PseudoMemberExpr(QualType T, ExprValueKind valueKind, Expr *base,
+                   SourceLocation opLoc, IdentifierInfo *identifier,
+                   SourceLocation memberLoc, Kind kind)
+    : Expr(PseudoMemberExprClass, T, valueKind, OK_Ordinary,
+           T->isDependentType(), base->isValueDependent(),
+           base->isInstantiationDependent(),
+           base->containsUnexpandedParameterPack()),
+      base(base), opLoc(opLoc), memberLoc(memberLoc),
+      identifier(identifier), kind(kind)
+  {}
+
+  PseudoMemberExpr(EmptyShell empty) : Expr(PseudoMemberExprClass, empty) {}
+
+  Expr *getBaseExpression() const { return static_cast<Expr*>(base); }
+
+  SourceLocation getOperatorLocation() const { return opLoc; }
+
+  IdentifierInfo *getIdentifier() const { return identifier; }
+
+  Kind getKind() const { return kind; }
+
+  SourceLocation getLocStart() const LLVM_READONLY {
+    return base->getLocStart();
+  }
+
+  SourceLocation getLocEnd() const LLVM_READONLY {
+    return memberLoc;
+  }
+
+  static bool classof(const Stmt *s) {
+    return s->getStmtClass() == PseudoMemberExprClass;
+  }
+  static bool classof(const PseudoMemberExpr *) {
+    return true;
+  }
+
+  // Iterators
+  child_range children() { return child_range(&base, &base + 1); }
+};
+
 }  // end namespace clang
 
 #endif

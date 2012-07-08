@@ -99,6 +99,11 @@ static Cl::Kinds ClassifyExprValueKind(const LangOptions &Lang,
   llvm_unreachable("Invalid value category of implicit cast.");
 }
 
+static Cl::Kinds ClassifyPseudoMemberExpr(const PseudoMemberExpr *) {
+  // Currently, the only kind is StaticStringAsArray, which is an lvalue.
+  return Cl::CL_LValue;
+}
+
 static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   // This function takes the first stab at classifying expressions.
   const LangOptions &Lang = Ctx.getLangOpts();
@@ -392,6 +397,9 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     assert(cast<InitListExpr>(E)->getNumInits() == 1 &&
            "Only 1-element init lists can be glvalues.");
     return ClassifyInternal(Ctx, cast<InitListExpr>(E)->getInit(0));
+
+  case Expr::PseudoMemberExprClass:
+    return ClassifyPseudoMemberExpr(cast<PseudoMemberExpr>(E));
   }
 
   llvm_unreachable("unhandled expression kind in classification");

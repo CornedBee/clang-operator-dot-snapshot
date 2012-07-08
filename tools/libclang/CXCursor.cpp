@@ -511,6 +511,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   }
       
   case Stmt::MSDependentExistsStmtClass:
+  case Stmt::PseudoMemberExprClass:
     K = CXCursor_UnexposedStmt;
     break;
   case Stmt::OMPParallelDirectiveClass:

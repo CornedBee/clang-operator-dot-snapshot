@@ -9511,6 +9511,20 @@ TreeTransform<Derived>::TransformAtomicExpr(AtomicExpr *E) {
                                         RetTy, E->getOp(), E->getRParenLoc());
 }
 
+template<typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformPseudoMemberExpr(PseudoMemberExpr *E) {
+  switch (E->getKind()) {
+  case PseudoMemberExpr::StaticStringAsArray: {
+    // We simply pretend to be the substituted underlying literal. The only
+    // point of this access was to make the thing type-dependent anyway.
+    return getDerived().TransformExpr(E->getBaseExpression());
+  }
+  }
+
+  llvm_unreachable("No such pseudo-member expression kind.");
+}
+
 //===----------------------------------------------------------------------===//
 // Type reconstruction
 //===----------------------------------------------------------------------===//

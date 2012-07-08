@@ -1579,6 +1579,11 @@ ActOnTStringMemberAccess(Sema &S, Expr *Base, bool IsArrow,
   }
 
   if (Identifier->isStr("c_str")) {
+    QualType T;
+    if (Base->isValueDependent())
+      T = S.Context.DependentTy;
+    return new (S.Context) PseudoMemberExpr(T, VK_LValue, Base, OpLoc,
+        Identifier, NameInfo.getLoc(), PseudoMemberExpr::StaticStringAsArray);
   }
 
   S.Diag(OpLoc, diag::err_no_member) << Identifier << "__tstring";

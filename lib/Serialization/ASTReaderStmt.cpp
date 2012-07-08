@@ -1844,6 +1844,19 @@ void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
 }
 
 //===----------------------------------------------------------------------===//
+// CornedBee Expressions and Statements.
+//===----------------------------------------------------------------------===//
+
+void ASTStmtReader::VisitPseudoMemberExpr(PseudoMemberExpr *E) {
+  VisitExpr(E);
+  E->base = Reader.ReadSubExpr();
+  E->opLoc = ReadSourceLocation(Record, Idx);
+  E->memberLoc = ReadSourceLocation(Record, Idx);
+  E->identifier = Reader.GetIdentifierInfo(F, Record, Idx);
+  E->kind = static_cast<PseudoMemberExpr::Kind>(Record[Idx++]);
+}
+
+//===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
 
@@ -2541,7 +2554,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_ATOMIC:
       S = new (Context) AtomicExpr(Empty);
       break;
-        
+
     case EXPR_LAMBDA: {
       unsigned NumCaptures = Record[ASTStmtReader::NumExprFields];
       unsigned NumArrayIndexVars = Record[ASTStmtReader::NumExprFields + 1];
@@ -2549,6 +2562,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
                                          NumArrayIndexVars);
       break;
     }
+
+    case EXPR_PSEUDO_MEMBER:
+      S = new (Context) PseudoMemberExpr(Empty);
+      break;
     }
     
     // We hit a STMT_STOP, so we're done with this expression.

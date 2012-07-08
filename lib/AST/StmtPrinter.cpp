@@ -1991,6 +1991,12 @@ void StmtPrinter::VisitAsTypeExpr(AsTypeExpr *Node) {
   OS << ")";
 }
 
+void StmtPrinter::VisitPseudoMemberExpr(PseudoMemberExpr *Node) {
+  PrintExpr(Node->getBaseExpression());
+  OS << ".";
+  OS << Node->getIdentifier()->getName();
+}
+
 //===----------------------------------------------------------------------===//
 // Stmt method implementations
 //===----------------------------------------------------------------------===//
