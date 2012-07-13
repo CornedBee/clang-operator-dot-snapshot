@@ -19,6 +19,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 
@@ -1590,6 +1591,90 @@ ActOnTStringMemberAccess(Sema &S, Expr *Base, bool IsArrow,
   return ExprError();
 }
 
+/// \brief Find the period operator (operator .) if it exists.
+static FunctionTemplateDecl *findPeriodOperator(Sema &S, Expr *base,
+                                                bool isArrow,
+                                                SourceLocation opLoc) {
+  QualType objectType = base->getType();
+  if (isArrow) {
+    if (const PointerType* pointer = objectType->getAs<PointerType>())
+      objectType = pointer->getPointeeType();
+    else
+      return 0;
+  }
+  if (S.RequireCompleteType(base->getLocStart(), objectType, 0))
+    return 0;
+  DeclarationName periodName =
+      S.Context.DeclarationNames.getCXXOperatorName(OO_Period);
+  LookupResult R(S, periodName, opLoc, Sema::LookupMemberName);
+  CXXScopeSpec unsetScope;
+  bool MOUS;
+  S.LookupTemplateName(R, 0, unsetScope, objectType, false, MOUS);
+
+  // FIXME: Need more validation.
+  if (R.getResultKind() == LookupResult::FoundOverloaded)
+    return cast<FunctionTemplateDecl>(*R.begin());
+
+  return 0;
+}
+
+/// \brief Construct a call to the period operator.
+static ExprResult callPeriodOperator(Sema &S, Expr *base, bool isArrow,
+                                     SourceLocation opLoc,
+                                     FunctionTemplateDecl *periodOperator,
+                                     const DeclarationNameInfo &nameInfo) {
+  // Build a template argument list consisting of a single string literal
+  // containing the member name.
+  SourceLocation nameLoc = nameInfo.getLoc();
+  TemplateArgumentListInfo arguments(nameLoc, nameLoc);
+  StringRef name = nameInfo.getName().getAsIdentifierInfo()->getName();
+  ASTContext &ctx = S.Context;
+  // Array size is one longer than the string to accommodate the terminator.
+  llvm::APInt arraySize(ctx.getTypeSize(ctx.getSizeType()), name.size()+1);
+  QualType literalType = ctx.getConstantArrayType(ctx.CharTy, arraySize,
+                                                  ArrayType::Normal, 0);
+  StringLiteral *pseudoLiteral =
+      StringLiteral::Create(ctx, name, StringLiteral::Ascii,
+                            /*Pascal=*/false, literalType, nameInfo.getLoc());
+  arguments.addArgument(TemplateArgumentLoc(TemplateArgument(pseudoLiteral),
+                                            pseudoLiteral));
+
+  // Do overload resolution to instantiate the template.
+  QualType baseType = base->getType();
+  if (isArrow)
+    baseType = baseType->getAs<PointerType>()->getPointeeType();
+  CXXRecordDecl *baseRecord = baseType->getAsCXXRecordDecl();
+  OverloadCandidateSet candidates(opLoc, OverloadCandidateSet::CSK_Normal);
+  S.AddMethodTemplateCandidate(periodOperator,
+                               DeclAccessPair::make(periodOperator, AS_public),
+                               baseRecord, &arguments, baseType,
+                               base->Classify(ctx), llvm::ArrayRef<Expr*>(),
+                               candidates);
+  OverloadCandidateSet::iterator best;
+  OverloadingResult res = candidates.BestViableFunction(S, opLoc, best);
+  if (res != OR_Success) {
+    S.Diag(opLoc, diag::err_ovl_no_viable_function_in_call)
+        << "operator .";
+    candidates.NoteCandidates(S, OCD_AllCandidates, llvm::ArrayRef<Expr*>());
+    return ExprError();
+  }
+
+  // Call the instantiated template.
+  FunctionDecl *instantiated = cast<FunctionDecl>(best->Function);
+  S.MarkFunctionReferenced(opLoc, instantiated);
+
+  CXXScopeSpec unsetScope;
+  Expr *access = BuildMemberExpr(S, ctx, base, isArrow, unsetScope,
+      SourceLocation(), instantiated, DeclAccessPair::make(periodOperator,
+                                                           AS_public),
+      DeclarationNameInfo(ctx.DeclarationNames.getCXXOperatorName(OO_Period),
+                          opLoc),
+      ctx.BoundMemberTy, VK_RValue, OK_Ordinary, &arguments);
+
+  return S.BuildCallToMemberFunction(0, access, nameLoc,
+                                     MultiExprArg(), nameLoc);
+}
+
 /// The main callback when the parser finds something like
 ///   expression . [nested-name-specifier] identifier
 ///   expression -> [nested-name-specifier] identifier
@@ -1662,6 +1747,12 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   if (Base->getType()->isTStringType()) {
     return ActOnTStringMemberAccess(*this, Base, IsArrow, OpLoc, SS, NameInfo,
                                       TemplateArgs);
+  }
+
+  if (FunctionTemplateDecl *periodOperator =
+          findPeriodOperator(*this, Base, IsArrow, OpLoc)) {
+    return callPeriodOperator(*this, Base, IsArrow, OpLoc,
+                              periodOperator, NameInfo);
   }
 
   ActOnMemberAccessExtraArgs ExtraArgs = {S, Id, ObjCImpDecl,

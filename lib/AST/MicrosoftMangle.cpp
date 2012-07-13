@@ -1004,6 +1004,9 @@ void MicrosoftCXXNameMangler::mangleOperatorName(OverloadedOperatorKind OO,
     break;
   }
 
+  // <operator-name> ::= ?_d # .
+  case OO_Period: Out << "?_d"; break;
+
   case OO_None:
   case NUM_OVERLOADED_OPERATORS:
     llvm_unreachable("Not an overloaded operator");

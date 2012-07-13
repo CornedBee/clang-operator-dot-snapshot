@@ -1731,6 +1731,8 @@ CXXNameMangler::mangleOperatorName(OverloadedOperatorKind OO, unsigned Arity) {
   // The conditional operator can't be overloaded, but we still handle it when
   // mangling expressions.
   case OO_Conditional: Out << "qu"; break;
+    //            ::= do        # .
+  case OO_Period: Out << "do"; break;
 
   case OO_None:
   case NUM_OVERLOADED_OPERATORS:

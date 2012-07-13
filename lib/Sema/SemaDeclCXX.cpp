@@ -10997,6 +10997,11 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
         << LastParam->getType() << (Op == OO_MinusMinus);
   }
 
+  if (Op == OO_Period) {
+    // Operator . must be a template with one __tstring parameter.
+    // FIXME: Implement this check.
+  }
+
   return false;
 }
 
