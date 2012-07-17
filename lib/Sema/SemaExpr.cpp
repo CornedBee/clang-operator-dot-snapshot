@@ -9199,6 +9199,40 @@ static void checkObjCPointerIntrospection(Sema &S, ExprResult &L, ExprResult &R,
   }
 }
 
+/// \brief Resolve a .* or ->* expression with a static string on the
+/// right hand side. Works by simulating a member access.
+static ExprResult accessByStaticString(Sema &S, Expr *lhs, Expr *rhs,
+                                       SourceLocation opLoc, bool indirect) {
+  ASTContext &ctx = S.Context;
+  if (rhs->isValueDependent())
+    return new (ctx) BinaryOperator(lhs, rhs,
+                                    indirect ? BO_PtrMemI : BO_PtrMemD,
+                                    ctx.DependentTy, VK_LValue, OK_Ordinary,
+                                    opLoc, false);
+
+  // Discover the underlying string literal.
+  rhs = rhs->IgnoreParenImpCasts();
+  if (SubstNonTypeTemplateParmExpr *t =
+          dyn_cast<SubstNonTypeTemplateParmExpr>(rhs))
+    rhs = t->getReplacement();
+  StringLiteral *lit = cast<StringLiteral>(rhs);
+
+  // Synthesize a declaration name.
+  IdentifierInfo *memberII = &ctx.Idents.get(lit->getString());
+  UnqualifiedId member;
+  member.setIdentifier(memberII, lit->getLocStart());
+
+  // Synthesize a member access.
+  CXXScopeSpec unsetScope;
+  return S.ActOnMemberAccessExpr(/*scope=*/0, lhs, opLoc,
+                                 indirect ? tok::arrow : tok::period,
+                                 unsetScope, SourceLocation(), member,
+                                 /*objCImplDecl=*/0, /*trailingLParen=*/false);
+  // Setting trailingLParen to false is OK, because it's only ever used to
+  // diagnose explicit destructor accesses that aren't calls, and we don't
+  // support that.
+}
+
 /// CreateBuiltinBinOp - Creates a new built-in binary operation with
 /// operator @p Opc at location @c TokLoc. This routine only supports
 /// built-in operations; ActOnBinOp handles overloaded operators.
@@ -9243,10 +9277,15 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       DiagnoseSelfAssignment(*this, LHS.get(), RHS.get(), OpLoc);
     break;
   case BO_PtrMemD:
-  case BO_PtrMemI:
+  case BO_PtrMemI: {
+    QualType rhsType = RHS.get()->getType();
+    if (rhsType->isTStringType() || isCharArray(rhsType))
+      return accessByStaticString(*this, LHS.get(), RHS.get(),
+                                  OpLoc, Opc == BO_PtrMemI);
     ResultTy = CheckPointerToMemberOperands(LHS, RHS, VK, OpLoc,
                                             Opc == BO_PtrMemI);
     break;
+  }
   case BO_Mul:
   case BO_Div:
     ResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, false,

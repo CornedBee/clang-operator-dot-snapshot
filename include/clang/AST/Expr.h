@@ -2931,7 +2931,8 @@ public:
                  ExprValueKind VK, ExprObjectKind OK,
                  SourceLocation opLoc, bool fpContractable)
     : Expr(BinaryOperatorClass, ResTy, VK, OK,
-           lhs->isTypeDependent() || rhs->isTypeDependent(),
+           lhs->isTypeDependent() || rhs->isTypeDependent() ||
+            ResTy->isDependentType(),
            lhs->isValueDependent() || rhs->isValueDependent(),
            (lhs->isInstantiationDependent() ||
             rhs->isInstantiationDependent()),
