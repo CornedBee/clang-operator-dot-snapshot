@@ -1611,11 +1611,30 @@ static FunctionTemplateDecl *findPeriodOperator(Sema &S, Expr *base,
   bool MOUS;
   S.LookupTemplateName(R, 0, unsetScope, objectType, false, MOUS);
 
-  // FIXME: Need more validation.
-  if (R.getResultKind() == LookupResult::FoundOverloaded)
-    return cast<FunctionTemplateDecl>(*R.begin());
+  // Now comes an incredible hack because I'm lazy. What we *should* do is
+  // perform overload resolution. What we *do* is take a wild stab at which
+  // method is probably the right one. It's a disaster.
 
-  return 0;
+  // FIXME: Need more validation.
+  if (!R.isOverloadedResult())
+    return 0;
+
+  // There could be a const and a non-const version here.
+  LookupResult::iterator it = R.begin();
+  FunctionTemplateDecl *decls[2];
+  decls[0] = cast<FunctionTemplateDecl>(*it++);
+  if (it == R.end())
+    return decls[0];
+
+  bool wantConst = objectType.isConstQualified();
+  bool firstIsConst = (cast<CXXMethodDecl>(decls[0]->getTemplatedDecl())
+            ->getTypeQualifiers() & Qualifiers::Const) != 0;
+  decls[1] = cast<FunctionTemplateDecl>(*it++);
+  //   first: c  nc
+  // want: c  0   1
+  //      nc  1   0
+  // So xor the two :-)
+  return decls[wantConst ^ firstIsConst];
 }
 
 /// \brief Construct a call to the period operator.
