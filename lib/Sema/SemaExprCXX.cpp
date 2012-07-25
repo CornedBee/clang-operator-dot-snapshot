@@ -4018,10 +4018,12 @@ ExprResult Sema::ActOnExpressionTrait(ExpressionTrait ET,
   return Result;
 }
 
-static bool EvaluateExpressionTrait(ExpressionTrait ET, Expr *E) {
+static bool EvaluateExpressionTrait(ASTContext &ctx,
+                                    ExpressionTrait ET, Expr *E) {
   switch (ET) {
   case ET_IsLValueExpr: return E->isLValue();
   case ET_IsRValueExpr: return E->isRValue();
+  case ET_IsBoundFunction: return E->getType() == ctx.BoundMemberTy;
   }
   llvm_unreachable("Expression trait not covered by switch");
 }
@@ -4032,13 +4034,14 @@ ExprResult Sema::BuildExpressionTrait(ExpressionTrait ET,
                                       SourceLocation RParen) {
   if (Queried->isTypeDependent()) {
     // Delay type-checking for type-dependent expressions.
-  } else if (Queried->getType()->isPlaceholderType()) {
+  } else if (ET != ET_IsBoundFunction &&
+             Queried->getType()->isPlaceholderType()) {
     ExprResult PE = CheckPlaceholderExpr(Queried);
     if (PE.isInvalid()) return ExprError();
     return BuildExpressionTrait(ET, KWLoc, PE.get(), RParen);
   }
 
-  bool Value = EvaluateExpressionTrait(ET, Queried);
+  bool Value = EvaluateExpressionTrait(Context, ET, Queried);
 
   return new (Context)
       ExpressionTraitExpr(KWLoc, ET, Queried, Value, RParen, Context.BoolTy);

@@ -1780,6 +1780,7 @@ static const char *getExpressionTraitName(ExpressionTrait ET) {
   switch (ET) {
   case ET_IsLValueExpr:      return "__is_lvalue_expr";
   case ET_IsRValueExpr:      return "__is_rvalue_expr";
+  case ET_IsBoundFunction:   return "__is_bound_function";
   }
   llvm_unreachable("Expression type trait not covered by switch");
 }

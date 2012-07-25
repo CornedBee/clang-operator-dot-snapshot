@@ -19,7 +19,8 @@ namespace clang {
 
   enum ExpressionTrait {
     ET_IsLValueExpr,
-    ET_IsRValueExpr
+    ET_IsRValueExpr,
+    ET_IsBoundFunction
   };
 }
 

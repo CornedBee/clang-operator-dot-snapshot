@@ -2762,6 +2762,7 @@ static ExpressionTrait ExpressionTraitFromTokKind(tok::TokenKind kind) {
   default: llvm_unreachable("Not a known unary expression trait.");
   case tok::kw___is_lvalue_expr:             return ET_IsLValueExpr;
   case tok::kw___is_rvalue_expr:             return ET_IsRValueExpr;
+  case tok::kw___is_bound_function:          return ET_IsBoundFunction;
   }
 }
 

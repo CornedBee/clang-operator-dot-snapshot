@@ -1129,8 +1129,9 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
 
   case tok::kw___is_lvalue_expr:
   case tok::kw___is_rvalue_expr:
+  case tok::kw___is_bound_function:
     return ParseExpressionTrait();
-      
+
   case tok::at: {
     SourceLocation AtLoc = ConsumeToken();
     return ParseObjCAtExpression(AtLoc);

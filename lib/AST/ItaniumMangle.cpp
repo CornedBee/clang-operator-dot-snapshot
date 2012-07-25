@@ -2644,7 +2644,6 @@ recurse:
   case Expr::StmtExprClass:
   case Expr::TypeTraitExprClass:
   case Expr::ArrayTypeTraitExprClass:
-  case Expr::ExpressionTraitExprClass:
   case Expr::VAArgExprClass:
   case Expr::CXXUuidofExprClass:
   case Expr::CUDAKernelCallExprClass:
@@ -2684,6 +2683,14 @@ recurse:
     for (unsigned i = 0, e = InitList->getNumInits(); i != e; ++i)
       mangleExpression(InitList->getInit(i));
     Out << "E";
+    break;
+  }
+
+  case Expr::ExpressionTraitExprClass: {
+    // Stupid mangling that doesn't even take into account the type of
+    // trait. I just need this right now.
+    Out << "et";
+    mangleExpression(cast<ExpressionTraitExpr>(E)->getQueriedExpression());
     break;
   }
 
