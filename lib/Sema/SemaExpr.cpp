@@ -7127,6 +7127,11 @@ static void diagnosePointerIncompatibility(Sema &S, SourceLocation Loc,
     << RHSExpr->getSourceRange();
 }
 
+static bool isCharArray(QualType type) {
+  const Type *element = type->getArrayElementTypeNoTypeQual();
+  return element && element->isCharType();
+}
+
 QualType Sema::CheckAdditionOperands( // C99 6.5.6
     ExprResult &LHS, ExprResult &RHS, SourceLocation Loc, unsigned Opc,
     QualType* CompLHSTy) {
@@ -7153,6 +7158,21 @@ QualType Sema::CheckAdditionOperands( // C99 6.5.6
   if (!compType.isNull() && compType->isArithmeticType()) {
     if (CompLHSTy) *CompLHSTy = compType;
     return compType;
+  }
+
+  // handle __tstring
+  QualType leftType = LHS.get()->getType();
+  QualType rightType = RHS.get()->getType();
+  if (leftType->isTStringType() || rightType->isTStringType()) {
+    // the other side must be a char array/pointer or __tstring too
+    QualType charPtr = Context.getPointerType(Context.CharTy.withConst());
+    if ((leftType->isTStringType() || isCharArray(leftType) ||
+         Context.hasSameType(leftType, charPtr)) &&
+        (rightType->isTStringType() || isCharArray(rightType) ||
+         Context.hasSameType(rightType, charPtr))) {
+      return Context.TStringTy;
+    }
+    return InvalidOperands(Loc, LHS, RHS);
   }
 
   // Type-checking.  Ultimately the pointer's going to be in PExp;

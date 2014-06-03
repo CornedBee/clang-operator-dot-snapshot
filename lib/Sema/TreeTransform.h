@@ -6970,9 +6970,52 @@ TreeTransform<Derived>::TransformMemberExpr(MemberExpr *E) {
                                         FirstQualifierInScope);
 }
 
+static void addAllLiteralLocations(SmallVectorImpl<SourceLocation> &locations,
+                                   StringLiteral *literal) {
+  for (StringLiteral::tokloc_iterator i = literal->tokloc_begin(),
+                                      e = literal->tokloc_end();
+       i != e; ++i)
+    locations.push_back(*i);
+}
+
+static ExprResult concatenateStringLiterals(Sema &S, Expr *lhs, Expr *rhs) {
+  // Unwrap substituted __tstrings.
+  if (SubstNonTypeTemplateParmExpr *t =
+          dyn_cast<SubstNonTypeTemplateParmExpr>(lhs))
+    lhs = t->getReplacement();
+  if (SubstNonTypeTemplateParmExpr *t =
+          dyn_cast<SubstNonTypeTemplateParmExpr>(rhs))
+    rhs = t->getReplacement();
+
+  // Concatenate strings.
+  StringLiteral *left = cast<StringLiteral>(lhs);
+  StringLiteral *right = cast<StringLiteral>(rhs);
+  std::string concatenated = (left->getString() + right->getString()).str();
+
+  // Build the type of the new literal. Add one to array size for terminator.
+  ASTContext &ctx = S.Context;
+  llvm::APInt arraySize(ctx.getTypeSize(ctx.getSizeType()),
+                        concatenated.size() + 1);
+  QualType literalType = ctx.getConstantArrayType(ctx.CharTy, arraySize,
+                                                  ArrayType::Normal, 0);
+
+  // Build new literal.
+  SmallVector<SourceLocation, 8> locations;
+  addAllLiteralLocations(locations, left);
+  addAllLiteralLocations(locations, right);
+  return StringLiteral::Create(ctx, concatenated, StringLiteral::Ascii,
+                               /*Pascal=*/false, literalType, locations.data(),
+                               locations.size());
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformBinaryOperator(BinaryOperator *E) {
+  // Incredible hack to support addition of __tstring.
+  bool wasTStringAddition = E->getOpcode() == BO_Add &&
+                            (E->getLHS()->getType()->isTStringType() ||
+                             E->getRHS()->getType()->isTStringType());
+
   ExprResult LHS = getDerived().TransformExpr(E->getLHS());
   if (LHS.isInvalid())
     return ExprError();
@@ -6988,6 +7031,9 @@ TreeTransform<Derived>::TransformBinaryOperator(BinaryOperator *E) {
 
   Sema::FPContractStateRAII FPContractState(getSema());
   getSema().FPFeatures.fp_contract = E->isFPContractable();
+
+  if (wasTStringAddition)
+    return concatenateStringLiterals(SemaRef, LHS.get(), RHS.get());
 
   return getDerived().RebuildBinaryOperator(E->getOperatorLoc(), E->getOpcode(),
                                             LHS.get(), RHS.get());

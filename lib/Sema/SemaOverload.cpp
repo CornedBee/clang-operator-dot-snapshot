@@ -7939,6 +7939,18 @@ public:
       }
     }
   }
+
+  void addStaticStringPlusOverloads() {
+    // Extension: __tstring + __tstring, __tstring + char[], char[] + __tstring
+    QualType tString = S.Context.TStringTy;
+    QualType charPtr = S.Context.getPointerType(S.Context.CharTy.withConst());
+    QualType params1[2] = { tString, tString };
+    S.AddBuiltinCandidate(tString, params1, Args, CandidateSet);
+    QualType params2[2] = { tString, charPtr };
+    S.AddBuiltinCandidate(tString, params2, Args, CandidateSet);
+    QualType params3[2] = { charPtr, tString };
+    S.AddBuiltinCandidate(tString, params3, Args, CandidateSet);
+  }
 };
 
 } // end anonymous namespace
@@ -8019,6 +8031,7 @@ void Sema::AddBuiltinOperatorCandidates(OverloadedOperatorKind Op,
   case OO_Plus: // '+' is either unary or binary
     if (Args.size() == 1)
       OpBuilder.addUnaryPlusPointerOverloads();
+    OpBuilder.addStaticStringPlusOverloads();
     // Fall through.
 
   case OO_Minus: // '-' is either unary or binary
