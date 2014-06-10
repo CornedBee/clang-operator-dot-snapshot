@@ -3572,6 +3572,11 @@ LexNextToken:
     Kind = tok::unknown;
     break;
 
+  // CornedBee: declname literal
+  case '`':
+    Kind = tok::backtick;
+    break;
+
   default: {
     if (isASCII(Char)) {
       Kind = tok::unknown;

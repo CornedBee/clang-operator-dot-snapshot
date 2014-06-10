@@ -210,6 +210,9 @@ PUNCTUATOR(at,                  "@")
 PUNCTUATOR(lesslessless,          "<<<")
 PUNCTUATOR(greatergreatergreater, ">>>")
 
+// CornedBee extensions
+PUNCTUATOR(backtick,            "`")
+
 // C99 6.4.1: Keywords.  These turn into kw_* tokens.
 // Flags allowed:
 //   KEYALL   - This is a keyword in all variants of C and C++, or it
