@@ -2735,6 +2735,20 @@ Parser::ParseCXXDeleteExpression(bool UseGlobal, SourceLocation Start) {
   return Actions.ActOnCXXDelete(Start, UseGlobal, ArrayDelete, Operand.get());
 }
 
+/// \brief Parse a CornedBee declname expression.
+///
+/// A declname expression is a declaration name literal, marked by enclosing
+/// backticks.
+ExprResult Parser::ParseBacktickExpression() {
+  assert(Tok.is(tok::backtick) && "Expected backtick");
+  SourceLocation tickLoc = ConsumeToken();
+
+  SkipUntil(tok::backtick, StopAtSemi);
+
+  Diag(tickLoc, diag::err_declname_unsupported);
+  return ExprError();
+}
+
 static TypeTrait TypeTraitFromTokKind(tok::TokenKind kind) {
   switch (kind) {
   default: llvm_unreachable("Not a known type trait");

@@ -1504,6 +1504,10 @@ private:
                                             SourceLocation Start);
 
   //===--------------------------------------------------------------------===//
+  // C++ CornedBee declname expression
+  ExprResult ParseBacktickExpression();
+
+  //===--------------------------------------------------------------------===//
   // C++ if/switch/while condition expression.
   bool ParseCXXCondition(ExprResult &ExprResult, Decl *&DeclResult,
                          SourceLocation Loc, bool ConvertToBoolean);

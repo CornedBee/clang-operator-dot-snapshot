@@ -1139,6 +1139,9 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   case tok::caret:
     Res = ParseBlockLiteralExpression();
     break;
+  case tok::backtick:
+    Res = ParseBacktickExpression();
+    break;
   case tok::code_completion: {
     Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Expression);
     cutOffParsing();
