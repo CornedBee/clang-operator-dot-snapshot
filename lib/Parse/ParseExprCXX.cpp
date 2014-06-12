@@ -2743,7 +2743,29 @@ ExprResult Parser::ParseBacktickExpression() {
   assert(Tok.is(tok::backtick) && "Expected backtick");
   SourceLocation tickLoc = ConsumeToken();
 
-  SkipUntil(tok::backtick, StopAtSemi);
+  ParsedType objectType = Actions.ActOnStartBacktickExpression();
+  CXXScopeSpec ss;
+  // We don't currently allow destructor names, because we don't really know
+  // how to represent them. ~auto would be an option. Same for constructor names
+  // in MS mode.
+  ParseOptionalCXXScopeSpecifier(ss, objectType,
+                                 /*EnteringContext=*/false,
+                                 /*MayBePseudoDestructor=*/nullptr);
+  SourceLocation templateKWLoc;
+  UnqualifiedId name;
+  if (ParseUnqualifiedId(ss,
+                         /*EnteringContext=*/false,
+                         /*AllowDestructorName=*/false,
+                         /*AllowConstructorName=*/false,
+                         objectType, templateKWLoc, name)) {
+    SkipUntil(tok::backtick, StopAtSemi);
+    return ExprError();
+  }
+
+  if (ExpectAndConsume(tok::backtick)) {
+    SkipUntil(tok::backtick, StopAtSemi);
+    return ExprError();
+  }
 
   Diag(tickLoc, diag::err_declname_unsupported);
   return ExprError();

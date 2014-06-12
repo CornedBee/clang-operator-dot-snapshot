@@ -2278,7 +2278,7 @@ TEST_F(FormatTest, DoesntRemoveUnknownTokens) {
   EXPECT_EQ("#define A \\ x20", format("#define A \\   x20"));
   verifyFormat("#define A ''");
   verifyFormat("#define A ''qqq");
-  verifyFormat("#define A `qqq");
+  verifyFormat("#define A ` qqq");
   verifyFormat("f(\"aaaa, bbbb, \"\\\"ccccc\\\"\");");
   EXPECT_EQ("const char *c = STRINGIFY(\n"
             "\\na : b);",

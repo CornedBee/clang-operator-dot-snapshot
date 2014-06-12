@@ -1953,10 +1953,11 @@ void Preprocessor::HandleDefineDirective(Token &DefineTok,
     //   "A-Za-z0-9!"#%&'()*+,_./:;<=>?[\]^_{|}~" as well as whitespace, which
     // is irrelevant here.
     bool isInvalid = false;
-    if (Tok.is(tok::at)) // @ is not in the list above.
+    if (Tok.is(tok::at) || Tok.is(tok::backtick)) {
+      // @ and ` are not in the list above.
       isInvalid = true;
-    else if (Tok.is(tok::unknown)) {
-      // If we have an unknown token, it is something strange like "`".  Since
+    } else if (Tok.is(tok::unknown)) {
+      // If we have an unknown token, it is something strange.  Since
       // all of valid characters would have lexed into a single character
       // token of some sort, we know this is not a valid case.
       isInvalid = true;

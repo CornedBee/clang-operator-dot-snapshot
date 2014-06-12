@@ -6080,3 +6080,7 @@ Sema::CheckMicrosoftIfExistsSymbol(Scope *S, SourceLocation KeywordLoc,
   
   return CheckMicrosoftIfExistsSymbol(S, SS, TargetNameInfo);
 }
+
+ParsedType Sema::ActOnStartBacktickExpression() {
+  return ParsedType::make(Context.DependentTy);
+}

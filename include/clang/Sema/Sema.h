@@ -4399,6 +4399,8 @@ public:
                                        const DeclSpec& DS,
                                        bool HasTrailingLParen);
 
+  ParsedType ActOnStartBacktickExpression();
+
   /// MaybeCreateExprWithCleanups - If the current full-expression
   /// requires any cleanups, surround it with a ExprWithCleanups node.
   /// Otherwise, just returns the passed-in expression.
