@@ -507,6 +507,7 @@ KEYWORD(__bridge_retain              , KEYARC)
 
 // CornedBee Extension.
 KEYWORD(__tstring                   , KEYCXX11)
+KEYWORD(__declname                  , KEYCXX11)
 KEYWORD(__is_bound_function         , KEYCXX11)
 
 // Alternate spelling for various tokens.  There are GCC extensions in all

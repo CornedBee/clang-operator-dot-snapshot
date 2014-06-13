@@ -64,6 +64,7 @@ namespace clang {
     TST_unknown_anytype,  // __unknown_anytype extension
     TST_atomic,           // C11 _Atomic
     TST_tstring,          // CornedBee __string
+    TST_declname,         // CornedBee __declname
     TST_error         // erroneous type
   };
   

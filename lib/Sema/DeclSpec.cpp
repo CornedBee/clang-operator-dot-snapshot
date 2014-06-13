@@ -286,6 +286,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_void:
     case TST_wchar:
     case TST_tstring:
+    case TST_declname:
       return false;
 
     case TST_decltype_auto:
@@ -452,6 +453,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
   case DeclSpec::TST_atomic: return "_Atomic";
   case DeclSpec::TST_tstring:     return "__tstring";
+  case DeclSpec::TST_declname:     return "__declname";
   case DeclSpec::TST_error:       return "(error)";
   }
   llvm_unreachable("Unknown typespec!");
