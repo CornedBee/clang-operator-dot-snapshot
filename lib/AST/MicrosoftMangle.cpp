@@ -1484,6 +1484,7 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T,
   case BuiltinType::WChar_S:
   case BuiltinType::WChar_U: Out << "_W"; break;
   case BuiltinType::TString: Out << "_S"; break;
+  case BuiltinType::Declname: Out << "_D"; break;
 
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \

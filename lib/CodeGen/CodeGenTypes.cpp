@@ -387,7 +387,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       break;
 
     case BuiltinType::TString:
-      llvm_unreachable("Unexpected compile-time string type!");
+    case BuiltinType::Declname:
+      llvm_unreachable("Unexpected compile-time-only type!");
       break;
 
     case BuiltinType::Dependent:

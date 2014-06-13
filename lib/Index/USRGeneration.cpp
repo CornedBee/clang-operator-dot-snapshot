@@ -585,6 +585,8 @@ void USRGenerator::VisitType(QualType T) {
           c = 'n'; break;
         case BuiltinType::TString:
           c = 't'; break;
+        case BuiltinType::Declname:
+          c = 'N'; break;
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"

@@ -178,6 +178,10 @@ BUILTIN_TYPE(Dependent, DependentTy)
 // the type of a non-type template parameter.
 BUILTIN_TYPE(TString, TStringTy)
 
+// This represents the type of a declname. Usable only as the type of a
+// non-type template parameter.
+BUILTIN_TYPE(Declname, TStringTy)
+
 // The type of an unresolved overload set.  A placeholder type.
 // Expressions with this type have one of the following basic
 // forms, with parentheses generally permitted:

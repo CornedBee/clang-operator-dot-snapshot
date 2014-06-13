@@ -1570,6 +1570,7 @@ public:
   bool isNullPtrType() const;                   // C++0x nullptr_t
   bool isAtomicType() const;                    // C11 _Atomic()
   bool isTStringType() const;                   // CornedBee __tstring
+  bool isDeclnameType() const;                  // CornedBee __declname
 
   bool isImage1dT() const;                      // OpenCL image1d_t
   bool isImage1dArrayT() const;                 // OpenCL image1d_array_t
@@ -5090,6 +5091,12 @@ inline bool Type::isNullPtrType() const {
 inline bool Type::isTStringType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>())
     return BT->getKind() == BuiltinType::TString;
+  return false;
+}
+
+inline bool Type::isDeclnameType() const {
+  if (const BuiltinType *BT = getAs<BuiltinType>())
+    return BT->getKind() == BuiltinType::Declname;
   return false;
 }
 

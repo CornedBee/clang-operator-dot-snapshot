@@ -1413,6 +1413,7 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
   case BuiltinType::Void:
   case BuiltinType::NullPtr:
   case BuiltinType::TString:
+  case BuiltinType::Declname:
   case BuiltinType::Dependent:
   case BuiltinType::OCLImage1d:
   case BuiltinType::OCLImage1dArray:

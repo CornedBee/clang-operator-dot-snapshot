@@ -1550,6 +1550,7 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case OCLSampler:        return "sampler_t";
   case OCLEvent:          return "event_t";
   case TString:           return "__tstring";
+  case Declname:          return "__declname";
   }
 
   llvm_unreachable("Invalid builtin type.");

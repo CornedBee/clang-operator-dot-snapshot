@@ -1058,6 +1058,9 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target) {
 
   // __tstring compile-time string (CornedBee)
   InitBuiltinType(TStringTy, BuiltinType::TString);
+
+  // __declname declaratoin name (CornedBee)
+  InitBuiltinType(DeclnameTy, BuiltinType::Declname);
 }
 
 DiagnosticsEngine &ASTContext::getDiagnostics() const {
@@ -5162,6 +5165,7 @@ static char getObjCEncodingForPrimitiveKind(const ASTContext *C,
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLSampler:
     case BuiltinType::TString:
+    case BuiltinType::Declname:
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(KIND, ID)
 #define PLACEHOLDER_TYPE(KIND, ID) \

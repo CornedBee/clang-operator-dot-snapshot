@@ -361,6 +361,7 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
   case BuiltinType::PseudoObject:
   case BuiltinType::BuiltinFn:
   case BuiltinType::TString:
+  case BuiltinType::Declname:
     break;
   }
   

@@ -204,7 +204,8 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
       return true;
 
     case BuiltinType::TString:
-      llvm_unreachable("asking for RTTI for __tstring");
+    case BuiltinType::Declname:
+      llvm_unreachable("asking for RTTI for compile-time-only type");
 
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)

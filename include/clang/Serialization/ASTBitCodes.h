@@ -751,7 +751,9 @@ namespace clang {
       /// \brief OpenCL sampler type.
       PREDEF_TYPE_SAMPLER_ID    = 45,
       /// \brief The compile-time string type.
-      PREDEF_TYPE_TSTRING = 46
+      PREDEF_TYPE_TSTRING = 46,
+      /// \brief The compile-time declaration name type.
+      PREDEF_TYPE_DECLNAME = 47
     };
 
     /// \brief The number of predefined type IDs that are reserved for

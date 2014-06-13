@@ -877,16 +877,14 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_decimal64:    // _Decimal64
   case DeclSpec::TST_decimal128:   // _Decimal128
     S.Diag(DS.getTypeSpecTypeLoc(), diag::err_decimal_unsupported);
-    Result = Context.IntTy;
+    Result = Context.DeclnameTy;
     declarator.setInvalidType(true);
     break;
   case DeclSpec::TST_tstring:  // __tstring
     Result = Context.TStringTy;
     break;
   case DeclSpec::TST_declname:  // __declname
-    S.Diag(DS.getTypeSpecTypeLoc(), diag::err_declname_unsupported);
-    Result = Context.IntTy;
-    declarator.setInvalidType(true);
+    Result = Context.DeclnameTy;
     break;
   case DeclSpec::TST_class:
   case DeclSpec::TST_enum:
