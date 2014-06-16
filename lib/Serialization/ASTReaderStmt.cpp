@@ -1847,6 +1847,13 @@ void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
 // CornedBee Expressions and Statements.
 //===----------------------------------------------------------------------===//
 
+void ASTStmtReader::VisitDeclnameLiteral(DeclnameLiteral *E) {
+  VisitExpr(E);
+  E->startTickLoc = ReadSourceLocation(Record, Idx);
+  E->endTickLoc = ReadSourceLocation(Record, Idx);
+  ReadDeclarationNameInfo(E->nameInfo, Record, Idx);
+}
+
 void ASTStmtReader::VisitPseudoMemberExpr(PseudoMemberExpr *E) {
   VisitExpr(E);
   E->base = Reader.ReadSubExpr();

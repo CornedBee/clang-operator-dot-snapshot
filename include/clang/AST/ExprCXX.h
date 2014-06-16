@@ -3794,6 +3794,41 @@ public:
   }
 };
 
+/// \brief A declname literal of the form `stuffhere`.
+class DeclnameLiteral : public Expr {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
+  SourceLocation startTickLoc;
+  SourceLocation endTickLoc;
+  // FIXME: This is probably insufficient to store template arguments.
+  DeclarationNameInfo nameInfo;
+
+  explicit DeclnameLiteral(EmptyShell Empty)
+    : Expr(DeclnameLiteralClass, Empty) { }
+
+public:
+  DeclnameLiteral(SourceLocation startTick, const DeclarationNameInfo& name,
+                  QualType ty, SourceLocation endTick) :
+    Expr(DeclnameLiteralClass, ty, VK_RValue, OK_Ordinary,
+         ty->isDependentType(), name.isInstantiationDependent(),
+         name.isInstantiationDependent(), 
+         name.containsUnexpandedParameterPack()),
+    startTickLoc(startTick), endTickLoc(endTick), nameInfo(name) { }
+
+  DeclarationNameInfo getNameInfo() const { return nameInfo; }
+  DeclarationName getName() const { return nameInfo.getName(); }
+
+  SourceLocation getLocStart() const LLVM_READONLY { return startTickLoc; }
+  SourceLocation getLocEnd() const LLVM_READONLY { return endTickLoc; }
+
+  static bool classof(const Stmt *t) {
+    return t->getStmtClass() == DeclnameLiteralClass;
+  }
+
+  child_range children() { return child_range(); }
+};
+
 /// \brief Access to a member of a built-in type with special meaning.
 ///
 /// The built-in type __tstring has special pseudo-members that can be

@@ -1094,6 +1094,12 @@ void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
     TemplateSpecializationType::PrintTemplateArgumentList(
         OS, Node->getTemplateArgs(), Node->getNumTemplateArgs(), Policy);
 }
+void StmtPrinter::VisitDeclnameLiteral(DeclnameLiteral *Node) {
+  OS << "`";
+  // FIXME: This doesn't look sufficient.
+  OS << Node->getNameInfo();
+  OS << "`";
+}
 void StmtPrinter::VisitObjCIsaExpr(ObjCIsaExpr *Node) {
   PrintExpr(Node->getBase());
   OS << (Node->isArrow() ? "->isa" : ".isa");

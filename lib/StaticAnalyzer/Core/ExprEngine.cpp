@@ -701,6 +701,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SEHExceptStmtClass:
     case Stmt::LambdaExprClass:
     case Stmt::SEHFinallyStmtClass:
+    case Stmt::DeclnameLiteralClass:
     case Stmt::PseudoMemberExprClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
       Engine.addAbortedBlock(node, currBldrCtx->getBlock());

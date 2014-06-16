@@ -2214,6 +2214,10 @@ DEF_TRAVERSE_STMT(UnresolvedLookupExpr, {
   }
 })
 
+DEF_TRAVERSE_STMT(DeclnameLiteral, {
+  TRY_TO(TraverseDeclarationNameInfo(S->getNameInfo()));
+})
+
 DEF_TRAVERSE_STMT(UnresolvedMemberExpr, {
   TRY_TO(TraverseNestedNameSpecifierLoc(S->getQualifierLoc()));
   if (S->hasExplicitTemplateArgs()) {

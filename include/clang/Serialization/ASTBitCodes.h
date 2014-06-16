@@ -1353,6 +1353,7 @@ namespace clang {
       EXPR_LAMBDA,                // LambdaExpr
 
       // CornedBee
+      EXPR_DECLNAME_LITERAL,      // DeclnameLiteral
       EXPR_PSEUDO_MEMBER          // PseudoMemberExpr
     };
 

@@ -181,4 +181,5 @@ def OMPParallelDirective : DStmt<OMPExecutableDirective>;
 def OMPSimdDirective : DStmt<OMPExecutableDirective>;
 
 // CornedBee Extensions.
+def DeclnameLiteral : DStmt<Expr>;
 def PseudoMemberExpr : DStmt<Expr>;

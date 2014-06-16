@@ -9559,6 +9559,13 @@ TreeTransform<Derived>::TransformAtomicExpr(AtomicExpr *E) {
 
 template<typename Derived>
 ExprResult
+TreeTransform<Derived>::TransformDeclnameLiteral(DeclnameLiteral *E) {
+  // FIXME: Implement.
+  return E;
+}
+
+template<typename Derived>
+ExprResult
 TreeTransform<Derived>::TransformPseudoMemberExpr(PseudoMemberExpr *E) {
   switch (E->getKind()) {
   case PseudoMemberExpr::StaticStringAsArray: {

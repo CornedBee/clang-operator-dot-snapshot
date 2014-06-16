@@ -2406,6 +2406,10 @@ bool RecursiveASTVisitor<Derived>::VisitOMPCopyinClause(OMPCopyinClause *C) {
   return true;
 }
 
+DEF_TRAVERSE_STMT(DeclnameLiteral, {
+  TRY_TO(TraverseDeclarationNameInfo(S->getNameInfo()));
+})
+
 // Traverse CornedBee: PseudoMember
 DEF_TRAVERSE_STMT(PseudoMemberExpr, { })
 
