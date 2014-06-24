@@ -2684,6 +2684,19 @@ public:
                                             RParenLoc);
   }
 
+  /// \brief Build a new declname literal.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildDeclnameLiteral(SourceLocation startTickLoc,
+                                    SourceLocation templateKWLoc,
+                                    const DeclarationNameInfo &name,
+                                  const TemplateArgumentListInfo *templateArgs,
+                                    SourceLocation endTickLoc) {
+    return getSema().BuildDeclnameLiteral(startTickLoc, templateKWLoc, name,
+                                          templateArgs, endTickLoc);
+  }
+
 private:
   TypeLoc TransformTypeInObjectScope(TypeLoc TL,
                                      QualType ObjectType,
@@ -9560,8 +9573,22 @@ TreeTransform<Derived>::TransformAtomicExpr(AtomicExpr *E) {
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformDeclnameLiteral(DeclnameLiteral *E) {
-  // FIXME: Implement.
-  return E;
+  DeclarationNameInfo transformedName =
+      getDerived().TransformDeclarationNameInfo(E->getNameInfo());
+
+  TemplateArgumentListInfo transformedArgs;
+  if (E->hasExplicitTemplateArgs()) {
+    transformedArgs.setLAngleLoc(E->getLAngleLoc());
+    transformedArgs.setRAngleLoc(E->getRAngleLoc());
+    if (getDerived().TransformTemplateArguments(E->getTemplateArgs(),
+                                                E->getNumTemplateArgs(),
+                                                transformedArgs))
+      return ExprError();
+  }
+
+  return getDerived().RebuildDeclnameLiteral(
+      E->getLocStart(), E->getTemplateKeywordLoc(), transformedName,
+      &transformedArgs, E->getLocEnd());
 }
 
 template<typename Derived>
