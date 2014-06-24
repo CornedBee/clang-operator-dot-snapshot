@@ -2762,13 +2762,14 @@ ExprResult Parser::ParseBacktickExpression() {
     return ExprError();
   }
 
+  SourceLocation endTickLoc = Tok.getLocation();
   if (ExpectAndConsume(tok::backtick)) {
     SkipUntil(tok::backtick, StopAtSemi);
     return ExprError();
   }
 
-  Diag(tickLoc, diag::err_declname_unsupported);
-  return ExprError();
+  return Actions.ActOnBacktickExpression(tickLoc, templateKWLoc,
+                                         name, endTickLoc);
 }
 
 static TypeTrait TypeTraitFromTokKind(tok::TokenKind kind) {

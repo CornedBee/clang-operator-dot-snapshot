@@ -6084,3 +6084,25 @@ Sema::CheckMicrosoftIfExistsSymbol(Scope *S, SourceLocation KeywordLoc,
 ParsedType Sema::ActOnStartBacktickExpression() {
   return ParsedType::make(Context.DependentTy);
 }
+
+ExprResult Sema::ActOnBacktickExpression(SourceLocation startTickLoc,
+                                         SourceLocation templateKWLoc,
+                                         const UnqualifiedId &name,
+                                         SourceLocation endTickLoc) {
+  DeclarationNameInfo nameInfo;
+  TemplateArgumentListInfo templateArgsBuffer;
+  const TemplateArgumentListInfo *templateArgs;
+  DecomposeUnqualifiedId(name, templateArgsBuffer, nameInfo, templateArgs);
+  return BuildDeclnameLiteral(startTickLoc, templateKWLoc, nameInfo,
+                              templateArgs, endTickLoc);
+}
+
+ExprResult
+Sema::BuildDeclnameLiteral(SourceLocation startTickLoc,
+                           SourceLocation templateKWLoc,
+                           const DeclarationNameInfo &name,
+                           const TemplateArgumentListInfo *templateArgs,
+                           SourceLocation endTickLoc) {
+  return DeclnameLiteral::Create(Context, startTickLoc, Context.DeclnameTy,
+                                 templateKWLoc, name, templateArgs, endTickLoc);
+}

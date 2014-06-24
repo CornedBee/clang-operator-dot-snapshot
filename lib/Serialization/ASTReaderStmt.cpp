@@ -1848,10 +1848,9 @@ void ASTStmtReader::VisitOMPSimdDirective(OMPSimdDirective *D) {
 //===----------------------------------------------------------------------===//
 
 void ASTStmtReader::VisitDeclnameLiteral(DeclnameLiteral *E) {
-  VisitExpr(E);
-  E->startTickLoc = ReadSourceLocation(Record, Idx);
-  E->endTickLoc = ReadSourceLocation(Record, Idx);
-  ReadDeclarationNameInfo(E->nameInfo, Record, Idx);
+  // Don't call VisitExpr, this is fully initialized at creation.
+  assert(E->getStmtClass() == Stmt::DeclnameLiteralClass &&
+         "It's a subclass, we must advance Idx!");
 }
 
 void ASTStmtReader::VisitPseudoMemberExpr(PseudoMemberExpr *E) {
@@ -2567,6 +2566,34 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       unsigned NumArrayIndexVars = Record[ASTStmtReader::NumExprFields + 1];
       S = LambdaExpr::CreateDeserialized(Context, NumCaptures, 
                                          NumArrayIndexVars);
+      break;
+    }
+
+    case EXPR_DECLNAME_LITERAL: {
+      // As for MemberExpr, we create this immediately because it requires
+      // extra space.
+      assert(Idx == 0);
+
+      SourceLocation templateKWLoc;
+      TemplateArgumentListInfo argInfo;
+      bool hasTemplateKWAndArgsInfo = Record[Idx++];
+      if (hasTemplateKWAndArgsInfo) {
+        templateKWLoc = ReadSourceLocation(F, Record, Idx);
+        unsigned numTemplateArgs = Record[Idx++];
+        argInfo.setLAngleLoc(ReadSourceLocation(F, Record, Idx));
+        argInfo.setRAngleLoc(ReadSourceLocation(F, Record, Idx));
+        for (unsigned i = 0; i != numTemplateArgs; ++i)
+          argInfo.addArgument(ReadTemplateArgumentLoc(F, Record, Idx));
+      }
+
+      QualType t = readType(F, Record, Idx);
+      SourceLocation startTickLoc = ReadSourceLocation(F, Record, Idx);
+      SourceLocation endTickLoc = ReadSourceLocation(F, Record, Idx);
+      DeclarationNameInfo nameInfo;
+      ReadDeclarationNameInfo(F, nameInfo, Record, Idx);
+
+      S = DeclnameLiteral::Create(Context, startTickLoc, t, templateKWLoc,
+                                  nameInfo, &argInfo, endTickLoc);
       break;
     }
 

@@ -4400,6 +4400,15 @@ public:
                                        bool HasTrailingLParen);
 
   ParsedType ActOnStartBacktickExpression();
+  ExprResult ActOnBacktickExpression(SourceLocation startTickLoc,
+                                     SourceLocation templateKWLoc,
+                                     const UnqualifiedId &name,
+                                     SourceLocation endTickLoc);
+  ExprResult BuildDeclnameLiteral(SourceLocation startTickLoc,
+                                  SourceLocation templateKWLoc,
+                                  const DeclarationNameInfo &name,
+                                  const TemplateArgumentListInfo *templateArgs,
+                                  SourceLocation endTickLoc);
 
   /// MaybeCreateExprWithCleanups - If the current full-expression
   /// requires any cleanups, surround it with a ExprWithCleanups node.

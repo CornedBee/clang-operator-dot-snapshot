@@ -901,7 +901,4 @@ def err_module_expected_semi : Error<
   "expected ';' after module name">;
 }
 
-def err_declname_unsupported : Error<
-  "declname literals are not yet supported">;
-
 } // end of Parser diagnostics

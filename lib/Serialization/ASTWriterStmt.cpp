@@ -1785,11 +1785,25 @@ void ASTStmtWriter::VisitOMPSimdDirective(OMPSimdDirective *D) {
 // CornedBee Expressions and Statements.
 //===----------------------------------------------------------------------===//
 
-void ASTStmtWriter::VisitDeclnameLiteral(DeclnameLiteral *S) {
-  VisitExpr(S);
-  Writer.AddSourceLocation(S->startTickLoc, Record);
-  Writer.AddSourceLocation(S->endTickLoc, Record);
-  Writer.AddDeclarationNameInfo(S->nameInfo, Record);
+void ASTStmtWriter::VisitDeclnameLiteral(DeclnameLiteral *E) {
+  // Don't call VisitExpr, we'll write everything here.
+
+  Record.push_back(E->hasTemplateInfo());
+  if (E->hasTemplateInfo()) {
+    Writer.AddSourceLocation(E->getTemplateKeywordLoc(), Record);
+    const ASTTemplateKWAndArgsInfo* templateInfo = E->templateInfo();
+    unsigned numTemplateArgs = templateInfo->NumTemplateArgs;
+    Record.push_back(numTemplateArgs);
+    Writer.AddSourceLocation(templateInfo->LAngleLoc, Record);
+    Writer.AddSourceLocation(templateInfo->RAngleLoc, Record);
+    for (unsigned i=0; i != numTemplateArgs; ++i)
+      Writer.AddTemplateArgumentLoc((*templateInfo)[i], Record);
+  }
+
+  Writer.AddTypeRef(E->getType(), Record);
+  Writer.AddSourceLocation(E->startTickLoc, Record);
+  Writer.AddSourceLocation(E->endTickLoc, Record);
+  Writer.AddDeclarationNameInfo(E->nameInfo, Record);
   Code = serialization::EXPR_DECLNAME_LITERAL;
 }
 

@@ -1527,3 +1527,50 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
 }
 
 void ArrayTypeTraitExpr::anchor() { }
+
+DeclnameLiteral *
+DeclnameLiteral::Create(const ASTContext &C, SourceLocation startTick,
+                        QualType ty, SourceLocation templateKWLoc,
+                        const DeclarationNameInfo& name,
+                        const TemplateArgumentListInfo *templateArgs,
+                        SourceLocation endTick) {
+  std::size_t size = sizeof(DeclnameLiteral);
+  if (templateArgs)
+    size += ASTTemplateKWAndArgsInfo::sizeFor(templateArgs->size());
+  else if (templateKWLoc.isValid())
+    size += ASTTemplateKWAndArgsInfo::sizeFor(0);
+
+  void *raw = C.Allocate(size, llvm::alignOf<DeclnameLiteral>());
+  return new (raw) DeclnameLiteral(startTick, ty, templateKWLoc,
+                                   name, templateArgs, endTick);
+}
+
+DeclnameLiteral::DeclnameLiteral(SourceLocation startTick, QualType ty,
+                                 SourceLocation templateKWLoc,
+                                 const DeclarationNameInfo& name,
+                                 const TemplateArgumentListInfo *templateArgs,
+                                 SourceLocation endTick) :
+    Expr(DeclnameLiteralClass, ty, VK_RValue, OK_Ordinary,
+         ty->isDependentType(), name.isInstantiationDependent(),
+         name.isInstantiationDependent(), 
+         name.containsUnexpandedParameterPack()),
+    startTickLoc(startTick), endTickLoc(endTick), nameInfo(name) {
+  DeclnameLiteralBits.HasTemplateKWAndArgsInfo = templateArgs ||
+                                                 templateKWLoc.isValid();
+  if (templateArgs) {
+    bool dependent = false;
+    bool instantiationDependent = false;
+    bool containsUnexpandedParameterPack = false;
+    templateInfo()->initializeFrom(templateKWLoc, *templateArgs, dependent,
+                                   instantiationDependent,
+                                   containsUnexpandedParameterPack);
+    if (dependent)
+      setValueDependent(true);
+    if (instantiationDependent)
+      setInstantiationDependent(true);
+    if (containsUnexpandedParameterPack)
+      setContainsUnexpandedParameterPack(true);
+  } else if (templateKWLoc.isValid()) {
+    templateInfo()->initializeFrom(templateKWLoc);
+  }
+}

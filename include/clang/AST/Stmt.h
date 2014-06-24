@@ -286,6 +286,19 @@ protected:
     unsigned NumArgs : 32 - 8 - 1 - NumExprBits;
   };
 
+  class DeclnameLiteralBitfields {
+    friend class DeclnameLiteral;
+
+    unsigned : NumExprBits;
+
+    /// \brief True if this declname specified a template keyword and/or a
+    /// template argument list explicitly, e.g., x->f<int>, x->template f,
+    /// x->template f<int>.
+    ///
+    /// See the equivalent field in MmeberExpr for details.
+    bool HasTemplateKWAndArgsInfo : 1;
+  };
+
   union {
     // FIXME: this is wasteful on 64-bit platforms.
     void *Aligner;
@@ -304,6 +317,7 @@ protected:
     ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
     InitListExprBitfields InitListExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
+    DeclnameLiteralBitfields DeclnameLiteralBits;
   };
 
   friend class ASTStmtReader;

@@ -1096,8 +1096,12 @@ void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
 }
 void StmtPrinter::VisitDeclnameLiteral(DeclnameLiteral *Node) {
   OS << "`";
-  // FIXME: This doesn't look sufficient.
+  if (Node->hasTemplateKeyword())
+    OS << "template ";
   OS << Node->getNameInfo();
+  if (Node->hasExplicitTemplateArgs())
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, Node->getTemplateArgs(), Node->getNumTemplateArgs(), Policy);
   OS << "`";
 }
 void StmtPrinter::VisitObjCIsaExpr(ObjCIsaExpr *Node) {

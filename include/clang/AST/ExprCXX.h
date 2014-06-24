@@ -3801,23 +3801,78 @@ class DeclnameLiteral : public Expr {
 
   SourceLocation startTickLoc;
   SourceLocation endTickLoc;
-  // FIXME: This is probably insufficient to store template arguments.
   DeclarationNameInfo nameInfo;
 
-  explicit DeclnameLiteral(EmptyShell Empty)
-    : Expr(DeclnameLiteralClass, Empty) { }
+  DeclnameLiteral(SourceLocation startTick, QualType ty,
+                  SourceLocation templateKWLoc, const DeclarationNameInfo& name,
+                  const TemplateArgumentListInfo *templateArgs,
+                  SourceLocation endTick);
+
+  bool hasTemplateInfo() const  {
+    return DeclnameLiteralBits.HasTemplateKWAndArgsInfo;
+  }
+  ASTTemplateKWAndArgsInfo* templateInfo() {
+    return reinterpret_cast<ASTTemplateKWAndArgsInfo*>(this + 1);
+  }
+  const ASTTemplateKWAndArgsInfo* templateInfo() const {
+    return reinterpret_cast<const ASTTemplateKWAndArgsInfo*>(this + 1);
+  }
 
 public:
-  DeclnameLiteral(SourceLocation startTick, const DeclarationNameInfo& name,
-                  QualType ty, SourceLocation endTick) :
-    Expr(DeclnameLiteralClass, ty, VK_RValue, OK_Ordinary,
-         ty->isDependentType(), name.isInstantiationDependent(),
-         name.isInstantiationDependent(), 
-         name.containsUnexpandedParameterPack()),
-    startTickLoc(startTick), endTickLoc(endTick), nameInfo(name) { }
+  static DeclnameLiteral *Create(const ASTContext &C, SourceLocation startTick,
+                                 QualType ty, SourceLocation templateKWLoc,
+                                 const DeclarationNameInfo& name,
+                                 const TemplateArgumentListInfo *templateArgs,
+                                 SourceLocation endTick);
 
   DeclarationNameInfo getNameInfo() const { return nameInfo; }
   DeclarationName getName() const { return nameInfo.getName(); }
+
+  /// \brief Retrieve the location of the template keyword preceding
+  /// the member name, if any.
+  SourceLocation getTemplateKeywordLoc() const {
+    if (!hasTemplateInfo()) return SourceLocation();
+    return templateInfo()->getTemplateKeywordLoc();
+  }
+
+  /// \brief Retrieve the location of the left angle bracket starting the
+  /// explicit template argument list following the member name, if any.
+  SourceLocation getLAngleLoc() const {
+    if (!hasTemplateInfo()) return SourceLocation();
+    return templateInfo()->LAngleLoc;
+  }
+
+  /// \brief Retrieve the location of the right angle bracket ending the
+  /// explicit template argument list following the member name, if any.
+  SourceLocation getRAngleLoc() const {
+    if (!hasTemplateInfo()) return SourceLocation();
+    return templateInfo()->RAngleLoc;
+  }
+
+  /// Determines whether the member name was preceded by the template keyword.
+  bool hasTemplateKeyword() const { return getTemplateKeywordLoc().isValid(); }
+
+  /// \brief Determines whether the member name was followed by an
+  /// explicit template argument list.
+  bool hasExplicitTemplateArgs() const { return getLAngleLoc().isValid(); }
+
+  /// \brief Retrieve the template arguments provided as part of this
+  /// template-id.
+  const TemplateArgumentLoc *getTemplateArgs() const {
+    if (!hasExplicitTemplateArgs())
+      return nullptr;
+
+    return templateInfo()->getTemplateArgs();
+  }
+
+  /// \brief Retrieve the number of template arguments provided as part of this
+  /// template-id.
+  unsigned getNumTemplateArgs() const {
+    if (!hasExplicitTemplateArgs())
+      return 0;
+
+    return templateInfo()->NumTemplateArgs;
+  }
 
   SourceLocation getLocStart() const LLVM_READONLY { return startTickLoc; }
   SourceLocation getLocEnd() const LLVM_READONLY { return endTickLoc; }
