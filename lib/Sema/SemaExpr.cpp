@@ -9233,6 +9233,43 @@ static ExprResult accessByStaticString(Sema &S, Expr *lhs, Expr *rhs,
   // support that.
 }
 
+static void restoreUnqualifiedId(DeclnameLiteral *declname,
+                                 UnqualifiedId& name) {
+  name.setIdentifier(declname->getName().getAsIdentifierInfo(),
+                     declname->getNameInfo().getLoc());
+}
+
+/// \brief Resolve a .* or ->* expression with a declname on the
+/// right hand side. Works by simulating a member access.
+static ExprResult accessByDeclname(Sema &S, Expr *lhs, Expr *rhs,
+                                       SourceLocation opLoc, bool indirect) {
+  ASTContext &ctx = S.Context;
+  if (rhs->isValueDependent())
+    return new (ctx) BinaryOperator(lhs, rhs,
+                                    indirect ? BO_PtrMemI : BO_PtrMemD,
+                                    ctx.DependentTy, VK_LValue, OK_Ordinary,
+                                    opLoc, false);
+
+  // Discover the underlying declname literal.
+  rhs = rhs->IgnoreParenImpCasts();
+  if (SubstNonTypeTemplateParmExpr *t =
+          dyn_cast<SubstNonTypeTemplateParmExpr>(rhs))
+    rhs = t->getReplacement();
+  DeclnameLiteral *lit = cast<DeclnameLiteral>(rhs);
+
+  // Synthesize a member access.
+  UnqualifiedId name;
+  restoreUnqualifiedId(lit, name);
+  CXXScopeSpec unsetScope;
+  return S.ActOnMemberAccessExpr(/*scope=*/nullptr, lhs, opLoc,
+                                 indirect ? tok::arrow : tok::period,
+                                 unsetScope, lit->getTemplateKeywordLoc(), name,
+                                 /*objCImplDecl=*/0, /*trailingLParen=*/false);
+  // Setting trailingLParen to false is OK for now, because it's only ever used
+  // to diagnose explicit destructor accesses that aren't calls, and we don't
+  // support that yet.
+}
+
 /// CreateBuiltinBinOp - Creates a new built-in binary operation with
 /// operator @p Opc at location @c TokLoc. This routine only supports
 /// built-in operations; ActOnBinOp handles overloaded operators.
@@ -9281,6 +9318,9 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     QualType rhsType = RHS.get()->getType();
     if (rhsType->isTStringType() || isCharArray(rhsType))
       return accessByStaticString(*this, LHS.get(), RHS.get(),
+                                  OpLoc, Opc == BO_PtrMemI);
+    if (rhsType->isDeclnameType())
+      return accessByDeclname(*this, LHS.get(), RHS.get(),
                                   OpLoc, Opc == BO_PtrMemI);
     ResultTy = CheckPointerToMemberOperands(LHS, RHS, VK, OpLoc,
                                             Opc == BO_PtrMemI);
