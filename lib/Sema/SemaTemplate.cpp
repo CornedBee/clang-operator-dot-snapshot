@@ -4941,8 +4941,8 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   QualType ArgType = Arg->getType();
 
   if (ParamType->isTStringType()) {
-    // Real __tstrings are still value dependent. We don't want to check them.
-    if (Arg->isValueDependent()) {
+    // Don't check type-dependent things.
+    if (Arg->isTypeDependent()) {
       Converted = TemplateArgument(Arg);
       return Arg;
     }
@@ -4957,13 +4957,20 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       Converted = TemplateArgument(String);
       return Arg;
     }
+    // A __tstring argument could also not be a StringLiteral underneath, but
+    // instead be a DeclRefExpr referencing a template parameter. We just accept
+    // everything that is a __tstring.
+    if (Arg->getType()->isTStringType()) {
+      Converted = TemplateArgument(Arg);
+      return Arg;
+    }
 
     Diag(Arg->getLocStart(), diag::err_bad_tstring_argument);
     return ExprError();
   }
 
   if (ParamType->isDeclnameType()) {
-    if (Arg->isValueDependent()) {
+    if (Arg->isTypeDependent()) {
       Converted = TemplateArgument(Arg);
       return Arg;
     }
@@ -4974,6 +4981,11 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
 
     if (DeclnameLiteral *Declname = dyn_cast<DeclnameLiteral>(Arg)) {
       Converted = TemplateArgument(Declname);
+      return Arg;
+    }
+
+    if (Arg->getType()->isDeclnameType()) {
+      Converted = TemplateArgument(Arg);
       return Arg;
     }
 
