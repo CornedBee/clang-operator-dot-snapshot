@@ -766,7 +766,12 @@ void ASTDumper::dumpTemplateArgument(const TemplateArgument &A, SourceRange R) {
   case TemplateArgument::String:
     OS << " string";
     lastChild();
-    dumpStmt(A.getAsExpr());
+    dumpStmt(A.getAsString());
+    break;
+  case TemplateArgument::Declname:
+    OS << " declname";
+    lastChild();
+    dumpStmt(A.getAsDeclname());
     break;
   case TemplateArgument::Pack:
     OS << " pack";

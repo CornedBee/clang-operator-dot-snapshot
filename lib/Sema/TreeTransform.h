@@ -2639,6 +2639,7 @@ public:
     case TemplateArgument::Null:
     case TemplateArgument::Integral:
     case TemplateArgument::String:
+    case TemplateArgument::Declname:
     case TemplateArgument::Declaration:
     case TemplateArgument::Pack:
     case TemplateArgument::TemplateExpansion:
@@ -3223,6 +3224,10 @@ void TreeTransform<Derived>::InventTemplateArgumentLoc(
     Output = TemplateArgumentLoc(Arg, Arg.getAsString());
     break;
 
+  case TemplateArgument::Declname:
+    Output = TemplateArgumentLoc(Arg, Arg.getAsDeclname());
+    break;
+
   case TemplateArgument::Expression:
     Output = TemplateArgumentLoc(Arg, Arg.getAsExpr());
     break;
@@ -3248,6 +3253,7 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
   case TemplateArgument::Declaration:
   case TemplateArgument::NullPtr:
   case TemplateArgument::String:
+  case TemplateArgument::Declname:
     llvm_unreachable("Unexpected TemplateArgument");
 
   case TemplateArgument::Type: {

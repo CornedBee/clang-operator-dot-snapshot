@@ -1140,6 +1140,8 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
     llvm_unreachable("Can't mangle template expansion arguments!");
   case TemplateArgument::String:
     llvm_unreachable("Mangling strings unimplemented for Microsoft!");
+  case TemplateArgument::Declname:
+    llvm_unreachable("Mangling declnames unimplemented for Microsoft!");
   case TemplateArgument::Type: {
     QualType T = TA.getAsType();
     mangleType(T, SourceRange(), QMM_Escape);

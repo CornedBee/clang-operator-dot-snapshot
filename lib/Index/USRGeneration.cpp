@@ -767,6 +767,7 @@ void USRGenerator::VisitTemplateArgument(const TemplateArgument &Arg) {
     break;
 
   case TemplateArgument::String:
+  case TemplateArgument::Declname:
     break;
   }
 }

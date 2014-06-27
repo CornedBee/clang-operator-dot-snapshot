@@ -1212,6 +1212,12 @@ ExprResult TemplateInstantiator::transformNonTypeTemplateParmRef(
     type = result.get()->getType();
     break;
   }
+
+  case TemplateArgument::Declname: {
+    result = arg.getAsDeclname();
+    type = result.get()->getType();
+    break;
+  }
   }
 
   if (result.isInvalid())

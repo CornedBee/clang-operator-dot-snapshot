@@ -218,6 +218,14 @@ checkDeducedTemplateArguments(ASTContext &Context,
     // All other combinations are incompatible.
     return DeducedTemplateArgument();
 
+  case TemplateArgument::Declname:
+    if (Y.getKind() == TemplateArgument::Declname &&
+        X.structurallyEquals(Y))
+      return X;
+
+    // All other combinations are incompatible.
+    return DeducedTemplateArgument();
+
   case TemplateArgument::Template:
     if (Y.getKind() == TemplateArgument::Template &&
         Context.hasSameTemplateName(X.getAsTemplate(), Y.getAsTemplate()))
@@ -348,11 +356,12 @@ DeduceNonTypeTemplateArgument(Sema &S,
 }
 
 /// \brief Deduce the value of the given non-type template parameter
-/// from the given string literal.
+/// from the given literal, which must be a StringLiteral or a DeclnameLiteral.
+template <typename ExprType>
 static Sema::TemplateDeductionResult
-DeduceNonTypeTemplateArgument(Sema &S,
+DeduceNonTypeTemplateArgumentFromLiteral(Sema &S,
                               NonTypeTemplateParmDecl *NTTP,
-                              StringLiteral *Literal,
+                              ExprType *Literal,
                               TemplateDeductionInfo &Info,
                     SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
   assert(NTTP->getDepth() == 0 &&
@@ -1807,28 +1816,45 @@ DeduceTemplateArguments(Sema &S,
     Info.SecondArg = Arg;
     return Sema::TDK_NonDeducedMismatch;
 
+  case TemplateArgument::Declname:
+    // FIXME: Do we want to match within the name too?
+    if (Arg.getKind() == TemplateArgument::Declname) {
+      if (Param.structurallyEquals(Arg))
+        return Sema::TDK_Success;
+    }
+
+    Info.FirstArg = Param;
+    Info.SecondArg = Arg;
+    return Sema::TDK_NonDeducedMismatch;
+
   case TemplateArgument::Expression: {
     if (NonTypeTemplateParmDecl *NTTP
           = getDeducedParameterFromExpr(Param.getAsExpr())) {
-      if (Arg.getKind() == TemplateArgument::Integral)
+      switch (Arg.getKind()) {
+      case TemplateArgument::Integral:
         return DeduceNonTypeTemplateArgument(S, NTTP,
                                              Arg.getAsIntegral(),
                                              Arg.getIntegralType(),
                                              /*ArrayBound=*/false,
                                              Info, Deduced);
-      if (Arg.getKind() == TemplateArgument::String)
-        return DeduceNonTypeTemplateArgument(S, NTTP, Arg.getAsString(),
-                                             Info, Deduced);
-      if (Arg.getKind() == TemplateArgument::Expression)
+      case TemplateArgument::String:
+        return DeduceNonTypeTemplateArgumentFromLiteral(
+            S, NTTP, Arg.getAsString(), Info, Deduced);
+      case TemplateArgument::Declname:
+        return DeduceNonTypeTemplateArgumentFromLiteral(
+            S, NTTP, Arg.getAsDeclname(), Info, Deduced);
+      case TemplateArgument::Expression:
         return DeduceNonTypeTemplateArgument(S, NTTP, Arg.getAsExpr(),
                                              Info, Deduced);
-      if (Arg.getKind() == TemplateArgument::Declaration)
+      case TemplateArgument::Declaration:
         return DeduceNonTypeTemplateArgument(S, NTTP, Arg.getAsDecl(),
                                              Info, Deduced);
 
-      Info.FirstArg = Param;
-      Info.SecondArg = Arg;
-      return Sema::TDK_NonDeducedMismatch;
+      default:
+        Info.FirstArg = Param;
+        Info.SecondArg = Arg;
+        return Sema::TDK_NonDeducedMismatch;
+      }
     }
 
     // Can't deduce anything, but that's okay.
@@ -2026,6 +2052,7 @@ static bool isSameTemplateArg(ASTContext &Context,
       return X.getAsIntegral() == Y.getAsIntegral();
 
     case TemplateArgument::String:
+    case TemplateArgument::Declname:
       return X.structurallyEquals(Y);
 
     case TemplateArgument::Expression: {
@@ -2102,6 +2129,9 @@ getTrivialTemplateArgumentLoc(Sema &S,
 
   case TemplateArgument::String:
     return TemplateArgumentLoc(Arg, Arg.getAsString());
+
+  case TemplateArgument::Declname:
+    return TemplateArgumentLoc(Arg, Arg.getAsDeclname());
 
   case TemplateArgument::Template:
   case TemplateArgument::TemplateExpansion: {
@@ -5086,6 +5116,11 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
 
   case TemplateArgument::Expression:
     MarkUsedTemplateParameters(Ctx, TemplateArg.getAsExpr(), OnlyDeduced,
+                               Depth, Used);
+    break;
+
+  case TemplateArgument::Declname:
+    MarkUsedTemplateParameters(Ctx, TemplateArg.getAsDeclname(), OnlyDeduced,
                                Depth, Used);
     break;
 

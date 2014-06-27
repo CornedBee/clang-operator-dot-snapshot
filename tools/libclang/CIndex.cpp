@@ -1382,6 +1382,11 @@ bool CursorVisitor::VisitTemplateArgumentLoc(const TemplateArgumentLoc &TAL) {
       return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
     return false;
 
+  case TemplateArgument::Declname:
+    if (Expr *E = TAL.getArgument().getAsDeclname())
+      return Visit(MakeCXCursor(E, StmtParent, TU, RegionOfInterest));
+    return false;
+
   case TemplateArgument::Template:
   case TemplateArgument::TemplateExpansion:
     if (VisitNestedNameSpecifierLoc(TAL.getTemplateQualifierLoc()))

@@ -114,6 +114,9 @@ bool TemplateArgument::isDependent() const {
   case Expression:
     return (getAsExpr()->isTypeDependent() || getAsExpr()->isValueDependent());
 
+  case Declname:
+    return getAsDeclname()->isValueDependent();
+
   case Pack:
     for (pack_iterator P = pack_begin(), PEnd = pack_end(); P != PEnd; ++P) {
       if (P->isDependent())
@@ -155,7 +158,10 @@ bool TemplateArgument::isInstantiationDependent() const {
     
   case Expression:
     return getAsExpr()->isInstantiationDependent();
-    
+
+  case Declname:
+    return getAsDeclname()->isInstantiationDependent();
+
   case Pack:
     for (pack_iterator P = pack_begin(), PEnd = pack_end(); P != PEnd; ++P) {
       if (P->isInstantiationDependent())
@@ -174,6 +180,7 @@ bool TemplateArgument::isPackExpansion() const {
   case Declaration:
   case Integral:
   case String:
+  case Declname:
   case Pack:
   case Template:
   case NullPtr:
@@ -214,6 +221,11 @@ bool TemplateArgument::containsUnexpandedParameterPack() const {
         
   case Expression:
     if (getAsExpr()->containsUnexpandedParameterPack())
+      return true;
+    break;
+
+  case Declname:
+    if (getAsDeclname()->containsUnexpandedParameterPack())
       return true;
     break;
 
@@ -282,6 +294,10 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     getAsString()->Profile(ID, Context, true);
     break;
 
+  case Declname:
+    getAsDeclname()->Profile(ID, Context, true);
+    break;
+
   case Expression:
     getAsExpr()->Profile(ID, Context, true);
     break;
@@ -327,6 +343,26 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
     return true;
   }
 
+  case Declname: {
+    const DeclnameLiteral *lhs = getAsDeclname();
+    const DeclnameLiteral *rhs = Other.getAsDeclname();
+    if (lhs->getName() != rhs->getName())
+      return false;
+    if (lhs->getNumTemplateArgs() != rhs->getNumTemplateArgs())
+      return false;
+    auto numTemplateArgs = lhs->getNumTemplateArgs();
+    if (numTemplateArgs > 0) {
+      const TemplateArgumentLoc *lhsArgs = lhs->getTemplateArgs();
+      const TemplateArgumentLoc *rhsArgs = rhs->getTemplateArgs();
+      for (unsigned i = 0; i < numTemplateArgs; ++i) {
+        if (!lhsArgs[i].getArgument().structurallyEquals(
+                rhsArgs[i].getArgument()))
+          return false;
+      }
+    }
+    return true;
+  }
+
   case Pack:
     if (Args.NumArgs != Other.Args.NumArgs) return false;
     for (unsigned I = 0, E = Args.NumArgs; I != E; ++I)
@@ -354,6 +390,7 @@ TemplateArgument TemplateArgument::getPackExpansionPattern() const {
   case Declaration:
   case Integral:
   case String:
+  case Declname:
   case Pack:
   case Null:
   case Template:
@@ -412,6 +449,10 @@ void TemplateArgument::print(const PrintingPolicy &Policy,
     getAsString()->printPretty(Out, 0, Policy);
     break;
 
+  case Declname:
+    getAsDeclname()->printPretty(Out, nullptr, Policy);
+    break;
+
   case Expression:
     getAsExpr()->printPretty(Out, nullptr, Policy);
     break;
@@ -446,10 +487,18 @@ StringLiteral *TemplateArgumentLoc::getSourceString() const {
   return static_cast<StringLiteral*>(LocInfo.getAsExpr());
 }
 
+DeclnameLiteral *TemplateArgumentLoc::getSourceDeclname() const {
+  assert(Argument.getKind() == TemplateArgument::Declname);
+  return static_cast<DeclnameLiteral*>(LocInfo.getAsExpr());
+}
+
 SourceRange TemplateArgumentLoc::getSourceRange() const {
   switch (Argument.getKind()) {
   case TemplateArgument::String:
     return getSourceString()->getSourceRange();
+
+  case TemplateArgument::Declname:
+    return getSourceDeclname()->getSourceRange();
 
   case TemplateArgument::Expression:
     return getSourceExpression()->getSourceRange();
@@ -517,6 +566,16 @@ const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
     LangOpts.CPlusPlus = true;
     PrintingPolicy Policy(LangOpts);
     Arg.getAsString()->printPretty(OS, 0, Policy);
+    return DB << OS.str();
+  }
+
+  case TemplateArgument::Declname: {
+    SmallString<32> Str;
+    llvm::raw_svector_ostream OS(Str);
+    LangOptions LangOpts;
+    LangOpts.CPlusPlus = true;
+    PrintingPolicy Policy(LangOpts);
+    Arg.getAsDeclname()->printPretty(OS, nullptr, Policy);
     return DB << OS.str();
   }
 

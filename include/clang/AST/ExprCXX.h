@@ -3812,9 +3812,11 @@ class DeclnameLiteral : public Expr {
     return DeclnameLiteralBits.HasTemplateKWAndArgsInfo;
   }
   ASTTemplateKWAndArgsInfo* templateInfo() {
+    assert(hasTemplateInfo());
     return reinterpret_cast<ASTTemplateKWAndArgsInfo*>(this + 1);
   }
   const ASTTemplateKWAndArgsInfo* templateInfo() const {
+    assert(hasTemplateInfo());
     return reinterpret_cast<const ASTTemplateKWAndArgsInfo*>(this + 1);
   }
 
@@ -3855,6 +3857,10 @@ public:
   /// \brief Determines whether the member name was followed by an
   /// explicit template argument list.
   bool hasExplicitTemplateArgs() const { return getLAngleLoc().isValid(); }
+
+  const ASTTemplateArgumentListInfo &getExplicitTemplateArgs() const {
+    return *templateInfo();
+  }
 
   /// \brief Retrieve the template arguments provided as part of this
   /// template-id.

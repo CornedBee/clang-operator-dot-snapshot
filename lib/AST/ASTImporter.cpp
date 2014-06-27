@@ -312,6 +312,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case TemplateArgument::String:
     return Arg1.structurallyEquals(Arg2);
 
+  case TemplateArgument::Declname:
+    return Arg1.structurallyEquals(Arg2);
+
   case TemplateArgument::Declaration:
     return Context.IsStructurallyEquivalent(Arg1.getAsDecl(), Arg2.getAsDecl());
 
@@ -2104,6 +2107,12 @@ ASTNodeImporter::ImportTemplateArgument(const TemplateArgument &From) {
   case TemplateArgument::String: {
     if (Expr *ToExpr = Importer.Import(From.getAsString()))
       return TemplateArgument(cast<StringLiteral>(ToExpr));
+    return TemplateArgument();
+  }
+
+  case TemplateArgument::Declname: {
+    if (Expr *ToExpr = Importer.Import(From.getAsDeclname()))
+      return TemplateArgument(cast<DeclnameLiteral>(ToExpr));
     return TemplateArgument();
   }
 

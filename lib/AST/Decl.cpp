@@ -310,6 +310,7 @@ static LinkageInfo getLVForTemplateArgumentList(ArrayRef<TemplateArgument> Args,
     case TemplateArgument::Null:
     case TemplateArgument::Integral:
     case TemplateArgument::String:
+    case TemplateArgument::Declname:
     case TemplateArgument::Expression:
       continue;
 

@@ -1303,6 +1303,10 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
     Visit(Arg.getAsString());
     break;
 
+  case TemplateArgument::Declname:
+    Visit(Arg.getAsDeclname());
+    break;
+
   case TemplateArgument::Expression:
     Visit(Arg.getAsExpr());
     break;

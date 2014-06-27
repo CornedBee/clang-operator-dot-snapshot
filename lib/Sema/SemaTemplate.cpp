@@ -640,6 +640,8 @@ Sema::CheckNonTypeTemplateParameterType(QualType T, SourceLocation Loc) {
       T->isNullPtrType() ||
       // CornedBee extension: __tstring
       T->isTStringType() ||
+      // CornedBee extension: __declname
+      T->isDeclnameType() ||
       // If T is a dependent type, we can't do the check now, so we
       // assume that it is well-formed.
       T->isDependentType()) {
@@ -2331,6 +2333,7 @@ static bool isTemplateArgumentTemplateParameter(
   case TemplateArgument::Integral:
   case TemplateArgument::Declaration:
   case TemplateArgument::String:
+  case TemplateArgument::Declname:
   case TemplateArgument::Pack:
   case TemplateArgument::TemplateExpansion:
     return false;
@@ -3423,6 +3426,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
     case TemplateArgument::Integral:
     case TemplateArgument::NullPtr:
     case TemplateArgument::String:
+    case TemplateArgument::Declname:
       // We've already checked this template argument, so just copy
       // it to the list of converted arguments.
       Converted.push_back(Arg.getArgument());
@@ -3560,6 +3564,8 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
     llvm_unreachable("Null pointer argument with template template parameter");
   case TemplateArgument::String:
     llvm_unreachable("String argument with template template parameter");
+  case TemplateArgument::Declname:
+    llvm_unreachable("Declname argument with template template parameter");
 
   case TemplateArgument::Pack:
     llvm_unreachable("Caller must expand template argument packs");
@@ -4953,6 +4959,25 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     }
 
     Diag(Arg->getLocStart(), diag::err_bad_tstring_argument);
+    return ExprError();
+  }
+
+  if (ParamType->isDeclnameType()) {
+    if (Arg->isValueDependent()) {
+      Converted = TemplateArgument(Arg);
+      return Arg;
+    }
+
+    if (SubstNonTypeTemplateParmExpr *Subst =
+                dyn_cast<SubstNonTypeTemplateParmExpr>(Arg))
+      Arg = Subst->getReplacement();
+
+    if (DeclnameLiteral *Declname = dyn_cast<DeclnameLiteral>(Arg)) {
+      Converted = TemplateArgument(Declname);
+      return Arg;
+    }
+
+    Diag(Arg->getLocStart(), diag::err_bad_declname_argument);
     return ExprError();
   }
 

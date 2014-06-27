@@ -3381,6 +3381,17 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A) {
     Out << A.getAsString()->getByteLength();
     Out << A.getAsString()->getBytes();
     break;
+  case TemplateArgument::Declname: {
+    // <declname argument> ::= N <name> E
+    // <name> ::= unqualied name mangling
+    Out << 'N';
+    const DeclnameLiteral *underlying = A.getAsDeclname();
+    mangleUnqualifiedName(nullptr, underlying->getName(), UnknownArity);
+    if (underlying->hasExplicitTemplateArgs()) 
+      mangleTemplateArgs(underlying->getExplicitTemplateArgs());
+    Out << 'E';
+    break;
+  }
   case TemplateArgument::Declaration: {
     //  <expr-primary> ::= L <mangled-name> E # external name
     // Clang produces AST's where pointer-to-member-function expressions

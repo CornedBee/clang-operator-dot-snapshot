@@ -4118,6 +4118,9 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
     case TemplateArgument::String:
       return Arg;
 
+    case TemplateArgument::Declname:
+      return Arg;
+
     case TemplateArgument::Declaration: {
       ValueDecl *D = cast<ValueDecl>(Arg.getAsDecl()->getCanonicalDecl());
       return TemplateArgument(D, Arg.isDeclForReferenceParam());

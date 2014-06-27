@@ -5899,6 +5899,7 @@ ASTReader::GetTemplateArgumentLocInfo(ModuleFile &F,
   switch (Kind) {
   case TemplateArgument::Expression:
   case TemplateArgument::String:
+  case TemplateArgument::Declname:
     return ReadExpr(F);
   case TemplateArgument::Type:
     return GetTypeSourceInfo(F, Record, Index);
@@ -7591,6 +7592,10 @@ ASTReader::ReadTemplateArgument(ModuleFile &F,
   case TemplateArgument::String: {
     Expr *E = ReadExpr(F);
     return TemplateArgument(cast<StringLiteral>(E));
+  }
+  case TemplateArgument::Declname: {
+    Expr *E = ReadExpr(F);
+    return TemplateArgument(cast<DeclnameLiteral>(E));
   }
   case TemplateArgument::Template: 
     return TemplateArgument(ReadTemplateName(F, Record, Idx));

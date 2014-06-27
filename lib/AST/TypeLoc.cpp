@@ -14,6 +14,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -370,6 +371,13 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(ASTContext &Context,
       break;
 
     case TemplateArgument::String:
+      ArgInfos[i] = TemplateArgumentLocInfo(Args[i].getAsString());
+      break;
+
+    case TemplateArgument::Declname:
+      ArgInfos[i] = TemplateArgumentLocInfo(Args[i].getAsDeclname());
+      break;
+
     case TemplateArgument::Expression:
       ArgInfos[i] = TemplateArgumentLocInfo(Args[i].getAsExpr());
       break;

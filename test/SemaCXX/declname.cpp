@@ -1,12 +1,52 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm -o - %s | FileCheck %s
 
-void test() {
-  (void)``; // expected-error {{expected unqualified-id}}
-  (void)`foo bar`; // expected-error {{expected '`'}}
-  (void)`+`; // expected-error {{expected unqualified-id}}
-  (void)`foo`;
-  (void)` foo`;
-  (void)`foo `;
-  (void)`operator+`;
-  (void)`template foo<int>`;
+
+template <__declname n>
+void f()
+{
+  int i = 1;
 }
+
+// CHECK: define void @_Z1fIN3fooEEvv
+template <>
+void f<`foo`>()
+{
+  // CHECK: store i32 2
+  int i = 2;
+}
+
+template <__declname n>
+void g()
+{
+  f<n>();
+}
+
+void h()
+{
+  // CHECK: call void @_Z1fIN3fooEEvv
+  f<`foo`>();
+  // CHECK: call void @_Z1fIN3barEEvv
+  f<`bar`>();
+
+  g<`foo`>();
+  g<`bar`>();
+}
+
+template <__declname n>
+class fooc {};
+
+template <__declname n>
+void foocf(fooc<n>) {}
+
+void i() {
+  fooc<`foo`> fc;
+  foocf(fc);
+}
+
+// CHECK: define linkonce_odr void @_Z1fIN3barEEvv
+
+// CHECK: define linkonce_odr void @_Z1gIN3fooEEvv
+// CHECK: call void @_Z1fIN3fooEEvv
+
+// CHECK: define linkonce_odr void @_Z1gIN3barEEvv
+// CHECK: call void @_Z1fIN3barEEvv

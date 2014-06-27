@@ -1318,6 +1318,7 @@ CollectTemplateParams(const TemplateParameterList *TPList,
       TemplateParams.push_back(TVP);
     } break;
     case TemplateArgument::Expression:
+    case TemplateArgument::Declname:
     case TemplateArgument::String: {
       const Expr *E = TA.getAsExpr();
       QualType T = E->getType();
