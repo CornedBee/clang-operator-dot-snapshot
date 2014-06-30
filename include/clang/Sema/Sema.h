@@ -3500,7 +3500,6 @@ public:
   // defines a custom operator->).
   struct ActOnMemberAccessExtraArgs {
     Scope *S;
-    UnqualifiedId &Id;
     Decl *ObjCImpDecl;
     bool HasTrailingLParen;
   };
@@ -3541,6 +3540,16 @@ public:
                                    CXXScopeSpec &SS,
                                    SourceLocation TemplateKWLoc,
                                    UnqualifiedId &Member,
+                                   Decl *ObjCImpDecl,
+                                   bool HasTrailingLParen);
+
+  ExprResult ActOnMemberAccessExpr(Scope *S, Expr *Base,
+                                   SourceLocation OpLoc,
+                                   tok::TokenKind OpKind,
+                                   CXXScopeSpec &SS,
+                                   SourceLocation TemplateKWLoc,
+                                   DeclarationNameInfo NameInfo,
+                                   const TemplateArgumentListInfo *TemplateArgs,
                                    Decl *ObjCImpDecl,
                                    bool HasTrailingLParen);
 

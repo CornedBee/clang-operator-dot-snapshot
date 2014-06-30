@@ -31,6 +31,14 @@ void h()
   g<`bar`>();
 }
 
+// CHECK: define linkonce_odr void @_Z1fIN3barEEvv
+
+// CHECK: define linkonce_odr void @_Z1gIN3fooEEvv
+// CHECK: call void @_Z1fIN3fooEEvv
+
+// CHECK: define linkonce_odr void @_Z1gIN3barEEvv
+// CHECK: call void @_Z1fIN3barEEvv
+
 template <__declname n>
 class fooc {};
 
@@ -42,26 +50,33 @@ void i() {
   foocf(fc);
 }
 
-struct x { int i; };
+struct x {
+  int i;
+  void operator ()(int) {}
+};
 
 template <__declname n>
-void j() {
+void j1() {
   x v;
   v.*n = 1;
 }
 
-void k() {
-  j<`i`>();
+template <__declname n>
+void j2() {
+  x v;
+  (v.*n)(1);
 }
 
-// CHECK: define linkonce_odr void @_Z1fIN3barEEvv
+void k() {
+  // CHECK: call void @_Z2j1IN1iEEvv
+  j1<`i`>();
+  // CHECK: call void @_Z2j2INclEEvv
+  j2<`operator ()`>();
+}
 
-// CHECK: define linkonce_odr void @_Z1gIN3fooEEvv
-// CHECK: call void @_Z1fIN3fooEEvv
-
-// CHECK: define linkonce_odr void @_Z1gIN3barEEvv
-// CHECK: call void @_Z1fIN3barEEvv
-
-// CHECK: define linkonce_odr void @_Z1jIN1iEEvv
+// CHECK: define linkonce_odr void @_Z2j1IN1iEEvv
 // CHECK: getelementptr {{.*}}, i32 0, i32 0
 // CHECK: store i32 1
+
+// CHECK: define linkonce_odr void @_Z2j2INclEEvv
+// CHECK: call void @_ZN1xclEi

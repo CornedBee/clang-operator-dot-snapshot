@@ -9233,12 +9233,6 @@ static ExprResult accessByStaticString(Sema &S, Expr *lhs, Expr *rhs,
   // support that.
 }
 
-static void restoreUnqualifiedId(DeclnameLiteral *declname,
-                                 UnqualifiedId& name) {
-  name.setIdentifier(declname->getName().getAsIdentifierInfo(),
-                     declname->getNameInfo().getLoc());
-}
-
 /// \brief Resolve a .* or ->* expression with a declname on the
 /// right hand side. Works by simulating a member access.
 static ExprResult accessByDeclname(Sema &S, Expr *lhs, Expr *rhs,
@@ -9258,12 +9252,23 @@ static ExprResult accessByDeclname(Sema &S, Expr *lhs, Expr *rhs,
   DeclnameLiteral *lit = cast<DeclnameLiteral>(rhs);
 
   // Synthesize a member access.
-  UnqualifiedId name;
-  restoreUnqualifiedId(lit, name);
   CXXScopeSpec unsetScope;
+  TemplateArgumentListInfo templateArgsBuffer;
+  const TemplateArgumentListInfo *templateArgs = nullptr;
+  if (lit->hasExplicitTemplateArgs()) {
+    const ASTTemplateArgumentListInfo &sourceArgs =
+        lit->getExplicitTemplateArgs();
+    templateArgsBuffer.setLAngleLoc(sourceArgs.LAngleLoc);
+    templateArgsBuffer.setRAngleLoc(sourceArgs.RAngleLoc);
+    for (unsigned I = 0; I < sourceArgs.NumTemplateArgs; ++I) {
+      templateArgsBuffer.addArgument(sourceArgs[I]);
+    }
+    templateArgs = &templateArgsBuffer;
+  }
   return S.ActOnMemberAccessExpr(/*scope=*/nullptr, lhs, opLoc,
                                  indirect ? tok::arrow : tok::period,
-                                 unsetScope, lit->getTemplateKeywordLoc(), name,
+                                 unsetScope, lit->getTemplateKeywordLoc(),
+                                 lit->getNameInfo(), templateArgs,
                                  /*objCImplDecl=*/0, /*trailingLParen=*/false);
   // Setting trailingLParen to false is OK for now, because it's only ever used
   // to diagnose explicit destructor accesses that aren't calls, and we don't

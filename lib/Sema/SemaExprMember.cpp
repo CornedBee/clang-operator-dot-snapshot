@@ -953,8 +953,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
           CXXScopeSpec TempSS(SS);
           RetryExpr = ActOnMemberAccessExpr(
               ExtraArgs->S, RetryExpr.get(), OpLoc, tok::arrow, TempSS,
-              TemplateKWLoc, ExtraArgs->Id, ExtraArgs->ObjCImpDecl,
-              ExtraArgs->HasTrailingLParen);
+              TemplateKWLoc, MemberNameInfo, TemplateArgs,
+              ExtraArgs->ObjCImpDecl, ExtraArgs->HasTrailingLParen);
         }
         if (Trap.hasErrorOccurred())
           RetryExpr = ExprError();
@@ -1718,25 +1718,6 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   if (SS.isSet() && SS.isInvalid())
     return ExprError();
 
-  // The only way a reference to a destructor can be used is to
-  // immediately call it. If the next token is not a '(', produce
-  // a diagnostic and build the call now.
-  if (!HasTrailingLParen &&
-      Id.getKind() == UnqualifiedId::IK_DestructorName) {
-    ExprResult DtorAccess =
-        ActOnMemberAccessExpr(S, Base, OpLoc, OpKind, SS, TemplateKWLoc, Id,
-                              ObjCImpDecl, /*HasTrailingLParen*/true);
-    if (DtorAccess.isInvalid())
-      return DtorAccess;
-    return DiagnoseDtorReference(Id.getLocStart(), DtorAccess.get());
-  }
-
-  // Warn about the explicit constructor calls Microsoft extension.
-  if (getLangOpts().MicrosoftExt &&
-      Id.getKind() == UnqualifiedId::IK_ConstructorName)
-    Diag(Id.getSourceRange().getBegin(),
-         diag::ext_ms_explicit_constructor_call);
-
   TemplateArgumentListInfo TemplateArgsBuffer;
 
   // Decompose the name into its component parts.
@@ -1745,7 +1726,42 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   DecomposeUnqualifiedId(Id, TemplateArgsBuffer,
                          NameInfo, TemplateArgs);
 
+  return ActOnMemberAccessExpr(S, Base, OpLoc, OpKind, SS, TemplateKWLoc,
+                               NameInfo, TemplateArgs, ObjCImpDecl,
+                               HasTrailingLParen);
+}
+
+ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
+                                       SourceLocation OpLoc,
+                                       tok::TokenKind OpKind,
+                                       CXXScopeSpec &SS,
+                                       SourceLocation TemplateKWLoc,
+                                       DeclarationNameInfo NameInfo,
+                                       const TemplateArgumentListInfo *
+                                           TemplateArgs,
+                                       Decl *ObjCImpDecl,
+                                       bool HasTrailingLParen) {
   DeclarationName Name = NameInfo.getName();
+
+  // The only way a reference to a destructor can be used is to
+  // immediately call it. If the next token is not a '(', produce
+  // a diagnostic and build the call now.
+  if (!HasTrailingLParen &&
+      Name.getNameKind() == DeclarationName::CXXDestructorName) {
+    ExprResult DtorAccess =
+        ActOnMemberAccessExpr(S, Base, OpLoc, OpKind, SS, TemplateKWLoc,
+                              NameInfo, TemplateArgs, ObjCImpDecl,
+                              /*HasTrailingLParen*/true);
+    if (DtorAccess.isInvalid())
+      return DtorAccess;
+    return DiagnoseDtorReference(NameInfo.getLoc(), DtorAccess.get());
+  }
+
+  // Warn about the explicit constructor calls Microsoft extension.
+  if (getLangOpts().MicrosoftExt &&
+      Name.getNameKind() == DeclarationName::CXXConstructorName)
+    Diag(NameInfo.getLoc(), diag::ext_ms_explicit_constructor_call);
+
   bool IsArrow = (OpKind == tok::arrow);
 
   NamedDecl *FirstQualifierInScope
@@ -1774,8 +1790,7 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
                               periodOperator, NameInfo);
   }
 
-  ActOnMemberAccessExtraArgs ExtraArgs = {S, Id, ObjCImpDecl,
-                                          HasTrailingLParen};
+  ActOnMemberAccessExtraArgs ExtraArgs = {S, ObjCImpDecl, HasTrailingLParen};
   return BuildMemberReferenceExpr(Base, Base->getType(), OpLoc, IsArrow, SS,
                                   TemplateKWLoc, FirstQualifierInScope,
                                   NameInfo, TemplateArgs, &ExtraArgs);
