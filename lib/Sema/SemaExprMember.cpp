@@ -1591,15 +1591,9 @@ ActOnTStringMemberAccess(Sema &S, Expr *Base, bool IsArrow,
   return ExprError();
 }
 
-// FIXME:
-// The following two functions are insane hacks, duplicating lots of code. Thus,
-// they miss a lot of important checks and keep producing bugs. Figure out a
-// better way to do this!
-
 /// \brief Find the period operator (operator .) if it exists.
-static FunctionTemplateDecl *findPeriodOperator(Sema &S, Expr *base,
-                                                bool isArrow,
-                                                SourceLocation opLoc) {
+static bool findPeriodOperator(Sema &S, Expr *base, bool isArrow,
+                               SourceLocation opLoc, LookupResult &result) {
   QualType objectType = base->getType();
   if (isArrow) {
     if (const PointerType* pointer = objectType->getAs<PointerType>())
@@ -1609,44 +1603,35 @@ static FunctionTemplateDecl *findPeriodOperator(Sema &S, Expr *base,
   }
   if (S.RequireCompleteType(base->getLocStart(), objectType, 0))
     return 0;
-  DeclarationName periodName =
-      S.Context.DeclarationNames.getCXXOperatorName(OO_Period);
-  LookupResult R(S, periodName, opLoc, Sema::LookupMemberName);
+
   CXXScopeSpec unsetScope;
-  bool MOUS;
-  S.LookupTemplateName(R, 0, unsetScope, objectType, false, MOUS);
+  bool dummy;
+  S.LookupTemplateName(result, 0, unsetScope, objectType, false, dummy);
 
-  // Now comes an incredible hack because I'm lazy. What we *should* do is
-  // perform overload resolution. What we *do* is take a wild stab at which
-  // method is probably the right one. It's a disaster.
-
-  // FIXME: Need more validation.
-  if (!R.isOverloadedResult())
-    return 0;
-
-  // There could be a const and a non-const version here.
-  LookupResult::iterator it = R.begin();
-  FunctionTemplateDecl *decls[2];
-  decls[0] = cast<FunctionTemplateDecl>(*it++);
-  if (it == R.end())
-    return decls[0];
-
-  bool wantConst = objectType.isConstQualified();
-  bool firstIsConst = (cast<CXXMethodDecl>(decls[0]->getTemplatedDecl())
-            ->getTypeQualifiers() & Qualifiers::Const) != 0;
-  decls[1] = cast<FunctionTemplateDecl>(*it++);
-  //   first: c  nc
-  // want: c  0   1
-  //      nc  1   0
-  // So xor the two :-)
-  return decls[wantConst ^ firstIsConst];
+  return !result.empty();
 }
 
-/// \brief Construct a call to the period operator.
-static ExprResult callPeriodOperator(Sema &S, Expr *base, bool isArrow,
-                                     SourceLocation opLoc,
-                                     FunctionTemplateDecl *periodOperator,
-                                     const DeclarationNameInfo &nameInfo) {
+static Expr *buildUnresolvedPeriodAccess(Sema &S, Expr *base, bool isArrow,
+                                         SourceLocation opLoc,
+                                         const TemplateArgumentListInfo *
+                                             templateArgs,
+                                         LookupResult &found) {
+  return UnresolvedMemberExpr::Create(S.Context, found.isUnresolvableResult(),
+                                      base, base->getType(), isArrow, opLoc,
+                                      CXXScopeSpec().getWithLocInContext(
+                                          S.Context),
+                                      opLoc, found.getLookupNameInfo(),
+                                      templateArgs, found.begin(), found.end());
+}
+
+/// \brief Construct a call to the period operator with a string literal.
+static bool tryPeriodWithString(Sema &S, Expr *base, bool isArrow,
+                                SourceLocation opLoc, LookupResult &found,
+                                const DeclarationNameInfo &nameInfo,
+                                Expr *&access) {
+  // This is somewhat wasteful: it does overload resolution twice. But it's the
+  // best I can come up with.
+
   // Build a template argument list consisting of a single string literal
   // containing the member name.
   SourceLocation nameLoc = nameInfo.getLoc();
@@ -1663,42 +1648,41 @@ static ExprResult callPeriodOperator(Sema &S, Expr *base, bool isArrow,
   arguments.addArgument(TemplateArgumentLoc(TemplateArgument(pseudoLiteral),
                                             pseudoLiteral));
 
-  // Do overload resolution to instantiate the template.
+  // Do overload resolution to see if some operator can be called with the
+  // string literal.
   QualType baseType = base->getType();
   if (isArrow)
     baseType = baseType->getAs<PointerType>()->getPointeeType();
   CXXRecordDecl *baseRecord = baseType->getAsCXXRecordDecl();
   OverloadCandidateSet candidates(opLoc, OverloadCandidateSet::CSK_Normal);
-  S.AddMethodTemplateCandidate(periodOperator,
-                               DeclAccessPair::make(periodOperator, AS_public),
-                               baseRecord, &arguments, baseType,
-                               base->Classify(ctx), llvm::ArrayRef<Expr*>(),
-                               candidates);
+  for (auto it = found.begin(), e = found.end(); it != e; ++it) {
+    if (auto *candidate = dyn_cast<FunctionTemplateDecl>(*it)) {
+      // If it's not a template, it can't possibly be a candidate.
+      S.AddMethodTemplateCandidate(candidate, it.getPair(), baseRecord,
+                                   &arguments, baseType, base->Classify(ctx),
+                                   MultiExprArg(), candidates);
+    }
+  }
   OverloadCandidateSet::iterator best;
   OverloadingResult res = candidates.BestViableFunction(S, opLoc, best);
-  if (res != OR_Success) {
-    S.Diag(opLoc, diag::err_ovl_no_viable_function_in_call)
-        << "operator .";
-    candidates.NoteCandidates(S, OCD_AllCandidates, llvm::ArrayRef<Expr*>());
-    return ExprError();
-  }
 
-  // Call the instantiated template.
-  FunctionDecl *instantiated = cast<FunctionDecl>(best->Function);
-  S.MarkFunctionReferenced(opLoc, instantiated);
-  if (S.getLangOpts().CPlusPlus1y &&
-        instantiated->getReturnType()->isUndeducedType() &&
-        S.DeduceReturnType(instantiated, opLoc))
-    return ExprError();
+  // Build a fake unresolved member expression and go through the standard call
+  // machinery. If the call is possible, that will create the call expression,
+  // otherwise it will diagnose the issue.
+  access = buildUnresolvedPeriodAccess(S, base, isArrow, opLoc, &arguments,
+                                       found);
+  return res != OR_Success;
+}
 
-  CXXScopeSpec unsetScope;
-  Expr *access = BuildMemberExpr(S, ctx, base, isArrow, unsetScope,
-      SourceLocation(), instantiated, DeclAccessPair::make(periodOperator,
-                                                           AS_public),
-      DeclarationNameInfo(ctx.DeclarationNames.getCXXOperatorName(OO_Period),
-                          opLoc),
-      ctx.BoundMemberTy, VK_RValue, OK_Ordinary, &arguments);
+/// \brief Construct a call to the period operator.
+static ExprResult callPeriodOperator(Sema &S, Expr *base, bool isArrow,
+                                     SourceLocation opLoc,
+                                     LookupResult &found,
+                                     const DeclarationNameInfo &nameInfo) {
+  Expr *access;
+  tryPeriodWithString(S, base, isArrow, opLoc, found, nameInfo, access);
 
+  SourceLocation nameLoc = nameInfo.getLoc();
   return S.BuildCallToMemberFunction(0, access, nameLoc,
                                      MultiExprArg(), nameLoc);
 }
@@ -1793,10 +1777,12 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
                                       TemplateArgs);
   }
 
-  if (FunctionTemplateDecl *periodOperator =
-          findPeriodOperator(*this, Base, IsArrow, OpLoc)) {
+  DeclarationName periodName =
+      Context.DeclarationNames.getCXXOperatorName(OO_Period);
+  LookupResult periodResult(*this, periodName, OpLoc, LookupMemberName);
+  if (findPeriodOperator(*this, Base, IsArrow, OpLoc, periodResult)) {
     return callPeriodOperator(*this, Base, IsArrow, OpLoc,
-                              periodOperator, NameInfo);
+                              periodResult, NameInfo);
   }
 
   ActOnMemberAccessExtraArgs ExtraArgs = {S, ObjCImpDecl, HasTrailingLParen};
