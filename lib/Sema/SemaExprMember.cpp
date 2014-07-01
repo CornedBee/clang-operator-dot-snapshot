@@ -1591,6 +1591,11 @@ ActOnTStringMemberAccess(Sema &S, Expr *Base, bool IsArrow,
   return ExprError();
 }
 
+// FIXME:
+// The following two functions are insane hacks, duplicating lots of code. Thus,
+// they miss a lot of important checks and keep producing bugs. Figure out a
+// better way to do this!
+
 /// \brief Find the period operator (operator .) if it exists.
 static FunctionTemplateDecl *findPeriodOperator(Sema &S, Expr *base,
                                                 bool isArrow,
@@ -1681,6 +1686,10 @@ static ExprResult callPeriodOperator(Sema &S, Expr *base, bool isArrow,
   // Call the instantiated template.
   FunctionDecl *instantiated = cast<FunctionDecl>(best->Function);
   S.MarkFunctionReferenced(opLoc, instantiated);
+  if (S.getLangOpts().CPlusPlus1y &&
+        instantiated->getReturnType()->isUndeducedType() &&
+        S.DeduceReturnType(instantiated, opLoc))
+    return ExprError();
 
   CXXScopeSpec unsetScope;
   Expr *access = BuildMemberExpr(S, ctx, base, isArrow, unsetScope,
