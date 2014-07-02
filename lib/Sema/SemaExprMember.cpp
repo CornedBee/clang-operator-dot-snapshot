@@ -1642,7 +1642,9 @@ static bool tryPeriodWithString(Sema &S, Expr *base, bool isArrow,
   llvm::APInt arraySize(ctx.getTypeSize(ctx.getSizeType()), name.size()+1);
   QualType literalType = ctx.getConstantArrayType(ctx.CharTy, arraySize,
                                                   ArrayType::Normal, 0);
-  StringLiteral *pseudoLiteral =
+  // Make the argument an expression so that it gets checked in overload
+  // resolution - a StringLiteral template argument is assumed to be valid.
+  Expr *pseudoLiteral =
       StringLiteral::Create(ctx, name, StringLiteral::Ascii,
                             /*Pascal=*/false, literalType, nameInfo.getLoc());
   arguments.addArgument(TemplateArgumentLoc(TemplateArgument(pseudoLiteral),
