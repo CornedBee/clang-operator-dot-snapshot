@@ -1704,8 +1704,10 @@ static ExprResult callPeriodOperator(Sema &S, Expr *base, bool isArrow,
                                      LookupResult &found,
                                      const DeclarationNameInfo &nameInfo) {
   Expr *access;
-  // Try with a string first; if that fails, do it again for declname.
-  if (tryPeriodWithString(S, base, isArrow, opLoc, found, nameInfo, access)) {
+  // Try with a string first if we have a simple name; if that fails,
+  // do it again for declname.
+  if (!nameInfo.getName().isIdentifier() ||
+      tryPeriodWithString(S, base, isArrow, opLoc, found, nameInfo, access)) {
     tryPeriodWithDeclname(S, base, isArrow, opLoc, found, nameInfo, access);
   }
 
