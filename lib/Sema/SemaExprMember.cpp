@@ -1624,31 +1624,16 @@ static Expr *buildUnresolvedPeriodAccess(Sema &S, Expr *base, bool isArrow,
                                       templateArgs, found.begin(), found.end());
 }
 
-/// \brief Construct a call to the period operator with a string literal.
-static bool tryPeriodWithString(Sema &S, Expr *base, bool isArrow,
-                                SourceLocation opLoc, LookupResult &found,
-                                const DeclarationNameInfo &nameInfo,
-                                Expr *&access) {
-  // This is somewhat wasteful: it does overload resolution twice. But it's the
-  // best I can come up with.
-
-  // Build a template argument list consisting of a single string literal
-  // containing the member name.
-  SourceLocation nameLoc = nameInfo.getLoc();
+/// \brief Construct a call to the period operator with the given template
+/// argument expression.
+static bool tryPeriodWithArgument(Sema &S, Expr *base, bool isArrow,
+                                  SourceLocation opLoc, LookupResult &found,
+                                  SourceLocation nameLoc, Expr *argument,
+                                  Expr *&access) {
+  // Build a template argument list containing the argument expression.
   TemplateArgumentListInfo arguments(nameLoc, nameLoc);
-  StringRef name = nameInfo.getName().getAsIdentifierInfo()->getName();
-  ASTContext &ctx = S.Context;
-  // Array size is one longer than the string to accommodate the terminator.
-  llvm::APInt arraySize(ctx.getTypeSize(ctx.getSizeType()), name.size()+1);
-  QualType literalType = ctx.getConstantArrayType(ctx.CharTy, arraySize,
-                                                  ArrayType::Normal, 0);
-  // Make the argument an expression so that it gets checked in overload
-  // resolution - a StringLiteral template argument is assumed to be valid.
-  Expr *pseudoLiteral =
-      StringLiteral::Create(ctx, name, StringLiteral::Ascii,
-                            /*Pascal=*/false, literalType, nameInfo.getLoc());
-  arguments.addArgument(TemplateArgumentLoc(TemplateArgument(pseudoLiteral),
-                                            pseudoLiteral));
+  arguments.addArgument(TemplateArgumentLoc(TemplateArgument(argument),
+                                            argument));
 
   // Do overload resolution to see if some operator can be called with the
   // string literal.
@@ -1661,7 +1646,8 @@ static bool tryPeriodWithString(Sema &S, Expr *base, bool isArrow,
     if (auto *candidate = dyn_cast<FunctionTemplateDecl>(*it)) {
       // If it's not a template, it can't possibly be a candidate.
       S.AddMethodTemplateCandidate(candidate, it.getPair(), baseRecord,
-                                   &arguments, baseType, base->Classify(ctx),
+                                   &arguments, baseType,
+                                   base->Classify(S.Context),
                                    MultiExprArg(), candidates);
     }
   }
@@ -1676,13 +1662,52 @@ static bool tryPeriodWithString(Sema &S, Expr *base, bool isArrow,
   return res != OR_Success;
 }
 
+/// \brief Construct a call to the period operator with a string literal.
+static bool tryPeriodWithString(Sema &S, Expr *base, bool isArrow,
+                                SourceLocation opLoc, LookupResult &found,
+                                const DeclarationNameInfo &nameInfo,
+                                Expr *&access) {
+  // This is somewhat wasteful: it does overload resolution twice. But it's the
+  // best I can come up with.
+
+  // Build a string literal containing the member name.
+  StringRef name = nameInfo.getName().getAsIdentifierInfo()->getName();
+  ASTContext &ctx = S.Context;
+  // Array size is one longer than the string to accommodate the terminator.
+  llvm::APInt arraySize(ctx.getTypeSize(ctx.getSizeType()), name.size()+1);
+  QualType literalType = ctx.getConstantArrayType(ctx.CharTy, arraySize,
+                                                  ArrayType::Normal, 0);
+  return tryPeriodWithArgument(
+      S, base, isArrow, opLoc, found, nameInfo.getLoc(),
+      StringLiteral::Create(ctx, name, StringLiteral::Ascii,
+                            /*Pascal=*/false, literalType, nameInfo.getLoc()),
+      access);
+}
+
+static bool tryPeriodWithDeclname(Sema &S, Expr *base, bool isArrow,
+                                  SourceLocation opLoc, LookupResult &found,
+                                  const DeclarationNameInfo &nameInfo,
+                                  Expr *&access) {
+  // Build a declname literal containing the member name.
+  ASTContext &ctx = S.Context;
+  SourceLocation nameLoc = nameInfo.getLoc();
+  return tryPeriodWithArgument(
+      S, base, isArrow, opLoc, found, nameLoc,
+      DeclnameLiteral::Create(ctx, nameLoc, ctx.DeclnameTy, SourceLocation(),
+                              nameInfo, nullptr, nameLoc),
+      access);
+}
+
 /// \brief Construct a call to the period operator.
 static ExprResult callPeriodOperator(Sema &S, Expr *base, bool isArrow,
                                      SourceLocation opLoc,
                                      LookupResult &found,
                                      const DeclarationNameInfo &nameInfo) {
   Expr *access;
-  tryPeriodWithString(S, base, isArrow, opLoc, found, nameInfo, access);
+  // Try with a string first; if that fails, do it again for declname.
+  if (tryPeriodWithString(S, base, isArrow, opLoc, found, nameInfo, access)) {
+    tryPeriodWithDeclname(S, base, isArrow, opLoc, found, nameInfo, access);
+  }
 
   SourceLocation nameLoc = nameInfo.getLoc();
   return S.BuildCallToMemberFunction(0, access, nameLoc,

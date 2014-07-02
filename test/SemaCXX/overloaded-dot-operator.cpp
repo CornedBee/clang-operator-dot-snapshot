@@ -19,8 +19,25 @@ struct sdot1 {
   ref r;
 };
 
+struct ndot1 {
+  template <__declname n>
+  decltype(auto) operator .() {
+    return (r.*n);
+  }
+  template <__declname n>
+  decltype(auto) operator .() const {
+    return (r.*n);
+  }
+
+  ref r;
+};
+
 void test() {
   sdot1 s;
   s.i = 1;
   s.p = &s;
+
+  ndot1 n;
+  n.i = 1;
+  n.p = &n;
 }
