@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only %s
+// RUN: %clang_cc1 -std=c++1y -fsyntax-only %s
 // expected-no-diagnostics
 
 struct ref {
