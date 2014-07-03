@@ -1710,15 +1710,17 @@ static bool tryPeriodWithString(Sema &S, Expr *base, bool isArrow,
 
 static bool tryPeriodWithDeclname(Sema &S, Expr *base, bool isArrow,
                                   SourceLocation opLoc, LookupResult &found,
+                                  SourceLocation templateKWLoc,
                                   const DeclarationNameInfo &nameInfo,
+                                  const TemplateArgumentListInfo *templateArgs,
                                   Expr *&access) {
   // Build a declname literal containing the member name.
   ASTContext &ctx = S.Context;
   SourceLocation nameLoc = nameInfo.getLoc();
   return tryPeriodWithArgument(
       S, base, isArrow, opLoc, found, nameLoc,
-      DeclnameLiteral::Create(ctx, nameLoc, ctx.DeclnameTy, SourceLocation(),
-                              nameInfo, nullptr, nameLoc),
+      DeclnameLiteral::Create(ctx, nameLoc, ctx.DeclnameTy, templateKWLoc,
+                              nameInfo, templateArgs, nameLoc),
       access);
 }
 
@@ -1726,13 +1728,19 @@ static bool tryPeriodWithDeclname(Sema &S, Expr *base, bool isArrow,
 static ExprResult callPeriodOperator(Sema &S, Expr *base, bool isArrow,
                                      SourceLocation opLoc,
                                      LookupResult &found,
-                                     const DeclarationNameInfo &nameInfo) {
+                                     SourceLocation templateKWLoc,
+                                     const DeclarationNameInfo &nameInfo,
+                                     const TemplateArgumentListInfo *
+                                         templateArgs) {
   Expr *access;
   // Try with a string first if we have a simple name; if that fails,
   // do it again for declname.
-  if (!nameInfo.getName().isIdentifier() ||
+  bool complexName = !nameInfo.getName().isIdentifier() || !templateArgs ||
+      templateArgs->size() > 0;
+  if (complexName ||
       tryPeriodWithString(S, base, isArrow, opLoc, found, nameInfo, access)) {
-    tryPeriodWithDeclname(S, base, isArrow, opLoc, found, nameInfo, access);
+    tryPeriodWithDeclname(S, base, isArrow, opLoc, found,
+                          templateKWLoc, nameInfo, templateArgs, access);
   }
 
   SourceLocation nameLoc = nameInfo.getLoc();
@@ -1838,8 +1846,8 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
       Context.DeclarationNames.getCXXOperatorName(OO_Period);
   LookupResult periodResult(*this, periodName, OpLoc, LookupMemberName);
   if (findPeriodOperator(*this, Base, IsArrow, OpLoc, periodResult)) {
-    return callPeriodOperator(*this, Base, IsArrow, OpLoc,
-                              periodResult, NameInfo);
+    return callPeriodOperator(*this, Base, IsArrow, OpLoc, periodResult,
+                              TemplateKWLoc, NameInfo, TemplateArgs);
   }
 
   ActOnMemberAccessExtraArgs ExtraArgs = {S, ObjCImpDecl, HasTrailingLParen};
