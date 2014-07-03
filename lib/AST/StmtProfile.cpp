@@ -449,6 +449,9 @@ void StmtProfiler::VisitMemberExpr(const MemberExpr *S) {
 void StmtProfiler::VisitDeclnameLiteral(const DeclnameLiteral *S) {
   VisitExpr(S);
   VisitName(S->getName());
+  if (S->hasExplicitTemplateArgs())
+    VisitTemplateArguments(S->getTemplateArgs(),
+                           S->getNumTemplateArgs());
 }
 
 void StmtProfiler::VisitCompoundLiteralExpr(const CompoundLiteralExpr *S) {
