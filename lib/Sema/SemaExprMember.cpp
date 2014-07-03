@@ -1575,7 +1575,7 @@ ActOnTStringMemberAccess(Sema &S, Expr *Base, bool IsArrow,
 {
   IdentifierInfo *Identifier = NameInfo.getName().getAsIdentifierInfo();
   if (IsArrow || SS.isSet() || TemplateArgs || !Identifier) {
-    S.Diag(OpLoc, diag::err_invalid_tstring_member_access);
+    S.Diag(OpLoc, diag::err_invalid_pseudo_member_access) << "__tstring";
     return ExprError();
   }
 
@@ -1588,6 +1588,30 @@ ActOnTStringMemberAccess(Sema &S, Expr *Base, bool IsArrow,
   }
 
   S.Diag(OpLoc, diag::err_no_member) << Identifier << "__tstring";
+  return ExprError();
+}
+
+static ExprResult
+ActOnDeclnameMemberAccess(Sema &S, Expr *Base, bool IsArrow,
+                         SourceLocation OpLoc, CXXScopeSpec &SS,
+                         const DeclarationNameInfo &NameInfo,
+                         const TemplateArgumentListInfo *TemplateArgs)
+{
+  IdentifierInfo *Identifier = NameInfo.getName().getAsIdentifierInfo();
+  if (IsArrow || SS.isSet() || TemplateArgs || !Identifier) {
+    S.Diag(OpLoc, diag::err_invalid_pseudo_member_access) << "__declname";
+    return ExprError();
+  }
+
+  if (Identifier->isStr("c_str")) {
+    QualType T;
+    if (Base->isValueDependent())
+      T = S.Context.DependentTy;
+    return new (S.Context) PseudoMemberExpr(T, VK_LValue, Base, OpLoc,
+        Identifier, NameInfo.getLoc(), PseudoMemberExpr::DeclnameAsArray);
+  }
+
+  S.Diag(OpLoc, diag::err_no_member) << Identifier << "__declname";
   return ExprError();
 }
 
@@ -1804,6 +1828,10 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   if (Base->getType()->isTStringType()) {
     return ActOnTStringMemberAccess(*this, Base, IsArrow, OpLoc, SS, NameInfo,
                                       TemplateArgs);
+  }
+  if (Base->getType()->isDeclnameType()) {
+    return ActOnDeclnameMemberAccess(*this, Base, IsArrow, OpLoc, SS, NameInfo,
+                                     TemplateArgs);
   }
 
   DeclarationName periodName =

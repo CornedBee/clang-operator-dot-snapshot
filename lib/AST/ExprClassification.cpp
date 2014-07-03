@@ -100,7 +100,7 @@ static Cl::Kinds ClassifyExprValueKind(const LangOptions &Lang,
 }
 
 static Cl::Kinds ClassifyPseudoMemberExpr(const PseudoMemberExpr *) {
-  // Currently, the only kind is StaticStringAsArray, which is an lvalue.
+  // Currently, the only kinds produce string literals, which are lvalues.
   return Cl::CL_LValue;
 }
 

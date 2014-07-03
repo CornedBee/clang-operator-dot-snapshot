@@ -9601,10 +9601,37 @@ template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformPseudoMemberExpr(PseudoMemberExpr *E) {
   switch (E->getKind()) {
-  case PseudoMemberExpr::StaticStringAsArray: {
+  case PseudoMemberExpr::StaticStringAsArray:
     // We simply pretend to be the substituted underlying literal. The only
     // point of this access was to make the thing type-dependent anyway.
     return getDerived().TransformExpr(E->getBaseExpression());
+
+  case PseudoMemberExpr::DeclnameAsArray: {
+    ExprResult base = getDerived().TransformExpr(E->getBaseExpression());
+    if (base.isInvalid())
+      return ExprError();
+    DeclnameLiteral *literal =
+        cast<DeclnameLiteral>(base.get()->IgnoreParenCasts());
+    SmallVector<char, 128> buffer;
+    llvm::raw_svector_ostream out(buffer);
+    if (literal->hasTemplateKeyword())
+      out << "template ";
+    out << literal->getNameInfo();
+    if (literal->hasExplicitTemplateArgs()) {
+      PrintingPolicy policy(SemaRef.LangOpts);
+      TemplateSpecializationType::PrintTemplateArgumentList(out,
+          literal->getTemplateArgs(), literal->getNumTemplateArgs(), policy);
+    }
+    StringRef name = out.str();
+    // Build a string literal.
+    ASTContext &ctx = SemaRef.Context;
+    // Array size is one longer than the string to accommodate the terminator.
+    llvm::APInt arraySize(ctx.getTypeSize(ctx.getSizeType()), name.size()+1);
+    QualType literalType = ctx.getConstantArrayType(ctx.CharTy, arraySize,
+                                                    ArrayType::Normal, 0);
+    return StringLiteral::Create(ctx, name, StringLiteral::Ascii,
+                                 /*Pascal=*/false, literalType,
+                                 E->getMemberLocation());
   }
   }
 

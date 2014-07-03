@@ -3902,7 +3902,8 @@ class PseudoMemberExpr : public Expr {
 public:
   /// \brief The various kinds of pseudo-members known to Clang.
   enum Kind {
-    StaticStringAsArray  ///< __tstring::c_str
+    StaticStringAsArray,  ///< __tstring::c_str
+    DeclnameAsArray       ///< __declname::c_str
   };
 
 private:
@@ -3929,6 +3930,7 @@ public:
   Expr *getBaseExpression() const { return static_cast<Expr*>(base); }
 
   SourceLocation getOperatorLocation() const { return opLoc; }
+  SourceLocation getMemberLocation() const { return memberLoc; }
 
   IdentifierInfo *getIdentifier() const { return identifier; }
 
