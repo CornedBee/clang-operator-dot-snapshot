@@ -2910,6 +2910,20 @@ Sema::BuildQualifiedTemplateIdExpr(CXXScopeSpec &SS,
   return BuildTemplateIdExpr(SS, TemplateKWLoc, R, /*ADL*/ false, TemplateArgs);
 }
 
+bool hasPeriodOperator(Sema &s, QualType t) {
+  SourceLocation pseudoLoc;
+  if (s.RequireCompleteType(pseudoLoc, t, 0))
+    return false;
+
+  CXXScopeSpec unsetScope;
+  bool dummy;
+  DeclarationName name =
+      s.Context.DeclarationNames.getCXXOperatorName(OO_Period);
+  LookupResult result(s, name, pseudoLoc, Sema::LookupMemberName);
+  s.LookupTemplateName(result, 0, unsetScope, t, false, dummy);
+  return !result.empty();
+}
+
 /// \brief Form a dependent template name.
 ///
 /// This action forms a dependent template name given the template
@@ -2963,12 +2977,16 @@ TemplateNameKind Sema::ActOnDependentTemplateName(Scope *S,
          cast<CXXRecordDecl>(LookupCtx)->hasAnyDependentBases())) {
       // This is a dependent template. Handle it below.
     } else if (TNK == TNK_Non_template) {
-      Diag(Name.getLocStart(),
-           diag::err_template_kw_refers_to_non_template)
-        << GetNameFromUnqualifiedId(Name).getName()
-        << Name.getSourceRange()
-        << TemplateKWLoc;
-      return TNK_Non_template;
+      // If the hosting type has a period operator overload, this should be
+      // still allowed.
+      if (!ObjectType || !hasPeriodOperator(*this, ObjectType.get())) {
+        Diag(Name.getLocStart(),
+             diag::err_template_kw_refers_to_non_template)
+          << GetNameFromUnqualifiedId(Name).getName()
+          << Name.getSourceRange()
+          << TemplateKWLoc;
+        return TNK_Non_template;
+      }
     } else {
       // We found something; return it.
       return TNK;
