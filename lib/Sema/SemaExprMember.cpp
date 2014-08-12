@@ -827,8 +827,8 @@ static ExprResult callPeriodOperator(Sema &S, Expr *base, bool isArrow,
   Expr *access;
   // Try with a string first if we have a simple name; if that fails,
   // do it again for declname.
-  bool complexName = !nameInfo.getName().isIdentifier() || !templateArgs ||
-      templateArgs->size() > 0;
+  bool complexName = !nameInfo.getName().isIdentifier() || (templateArgs &&
+      templateArgs->size() > 0);
   if (complexName ||
       tryPeriodWithString(S, base, isArrow, opLoc, found, nameInfo, access)) {
     tryPeriodWithDeclname(S, base, isArrow, opLoc, found,
